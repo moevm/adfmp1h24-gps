@@ -1,11 +1,13 @@
-use std::ffi::CStr;
-use std::sync::Arc;
+use std::ffi::{CStr, CString};
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::AtomicBool;
-use glutin::display::Display;
+use glutin::display::{Display, GlDisplay};
+use log::info;
 use winit::dpi::PhysicalPosition;
 
 pub mod screen;
 pub mod main_screen;
+pub mod stats_screen;
 
 pub mod gl {
     #![allow(clippy::all)]
@@ -42,6 +44,7 @@ pub enum MyInputEvent {
 pub struct AppState {
     screens: Vec<Box<dyn screen::ScreenTrait>>,
     exit_request: Arc<AtomicBool>,
+    gl: Option<Arc<Mutex<gl::Gl>>>,
 }
 
 impl AppState {
@@ -49,14 +52,37 @@ impl AppState {
         AppState {
             screens: Vec::new(),
             exit_request,
+            gl: None
         }
     }
 
     // called once on resume
     pub fn ensure_renderer(&mut self, gl_display: &Display) {
+        let gl = self.gl.get_or_insert_with(|| {
+            log::info!("[AppState] Initializing GL...");
+
+            let gl = gl::Gl::load_with(|symbol| {
+                let symbol = CString::new(symbol).unwrap();
+                gl_display.get_proc_address(symbol.as_c_str()).cast()
+            });
+
+            if let Some(renderer) = get_gl_string(&gl, gl::RENDERER) {
+                println!("Running on {}", renderer.to_string_lossy());
+            }
+            if let Some(version) = get_gl_string(&gl, gl::VERSION) {
+                println!("OpenGL Version {}", version.to_string_lossy());
+            }
+
+            if let Some(shaders_version) = get_gl_string(&gl, gl::SHADING_LANGUAGE_VERSION) {
+                println!("Shaders version on {}", shaders_version.to_string_lossy());
+            }
+
+            Arc::new(Mutex::new(gl))
+        });
+
         //nice place to create first screen
         if self.screens.len() == 0 {
-            self.screens.push(Box::new(main_screen::Screen::new(gl_display, self.exit_request.clone())));
+            self.screens.push(Box::new(main_screen::MainScreen::new(gl.clone(), self.exit_request.clone())));
         }
     }
 
@@ -76,8 +102,35 @@ impl AppState {
 
     // called repeatedly from outside
     pub fn draw(&mut self) {
-        for screen in self.screens.iter_mut() {
-            screen.draw();
+        let mut screens_len = self.screens.len();
+        let mut i = 0;
+        while i < screens_len {
+            self.screens[i].draw();
+            if self.screens[i].is_expanded() {
+                if i > 0 {
+                    info!("[ScreenStack]Screen {} is expanded, dropping back screens...", i);
+                }
+                let new_screens = self.screens.split_off(i);
+                self.screens = new_screens;
+                screens_len = self.screens.len();
+                i = 0;
+            }
+            else {
+                i += 1;
+            }
         }
+    }
+
+    pub fn pop_screen(&mut self) {
+        log::info!("[ScreenStack] Popping top screen");
+        self.screens.pop();
+        if self.screens.len() == 0 {
+            self.exit_request.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    pub fn push_screen(&mut self, screen: Box<dyn screen::ScreenTrait>) {
+        log::info!("[ScreenStack] Pushing new screen");
+        self.screens.push(screen);
     }
 }

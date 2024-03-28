@@ -6,8 +6,8 @@ use std::time::Instant;
 use glutin::display::Display;
 use glutin::prelude::*;
 use crate::render::{create_shader, get_gl_string};
+use crate::render::gl::Gles2;
 use crate::render::screen::{ScreenManagementCmd, ScreenTrait};
-use crate::render::stats_screen::StatsScreen;
 
 #[rustfmt::skip]
 static VERTEX_DATA: [f32; 15] = [
@@ -21,7 +21,7 @@ const FRAGMENT_SHADER_SOURCE: &[u8] = include_bytes!("shader-frag.glsl");
 
 pub use super::gl;
 
-pub struct MainScreen {
+pub struct StatsScreen {
     program: gl::types::GLuint,
     vao: gl::types::GLuint,
     vbo: gl::types::GLuint,
@@ -32,7 +32,7 @@ pub struct MainScreen {
     start: Instant,
 }
 
-impl MainScreen {
+impl StatsScreen {
     pub fn new(gl_mtx: Arc<Mutex<gl::Gl>>, exit_request: Arc<AtomicBool>) -> Self {
         unsafe {
             let gl = gl_mtx.lock().unwrap();
@@ -121,19 +121,13 @@ impl MainScreen {
             );
         }
     }
-
-    // pub fn resize(&mut self, width: i32, height: i32) {
-    //     let gl = self.gl_mtx.lock().unwrap();
-    //     unsafe {
-    //         self.gl.Viewport(0, 0, width, height);
-    //     }
-    // }
 }
 
-impl ScreenTrait for MainScreen {
-    fn press(&mut self, pos: (f64, f64)) -> ScreenManagementCmd {
-        ScreenManagementCmd::PushScreen(Box::new(StatsScreen::new(self.gl_mtx.clone(), self.exit_request.clone())))
+impl ScreenTrait for StatsScreen {
+    fn back(&mut self) -> ScreenManagementCmd {
+        ScreenManagementCmd::PopScreen
     }
+
     fn draw(&mut self) {
         let gl = self.gl_mtx.lock().unwrap();
         unsafe {
@@ -142,18 +136,18 @@ impl ScreenTrait for MainScreen {
             gl.BindVertexArray(self.vao);
             gl.BindBuffer(gl::ARRAY_BUFFER, self.vbo);
 
-            drop(gl);
+            mem::drop(gl);
             self.update_vertex_data();
             let gl = self.gl_mtx.lock().unwrap();
 
-            gl.ClearColor(0.1, 0.1, 0.1, 0.9);
+            gl.ClearColor(0.7, 0.1, 0.9, 0.9);
             gl.Clear(gl::COLOR_BUFFER_BIT);
             gl.DrawArrays(gl::TRIANGLES, 0, 3);
         }
     }
 }
 
-impl Drop for MainScreen {
+impl Drop for StatsScreen {
     fn drop(&mut self) {
         let gl = self.gl_mtx.lock().unwrap();
         unsafe {

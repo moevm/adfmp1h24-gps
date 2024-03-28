@@ -14,6 +14,7 @@ use raw_window_handle::{HasRawWindowHandle, RawDisplayHandle, RawWindowHandle};
 use winit::dpi::PhysicalPosition;
 use winit::event_loop::EventLoopWindowTarget;
 use crate::render::AppState;
+use crate::render::screen::ScreenManagementCmd;
 
 
 struct SurfaceState {
@@ -22,9 +23,9 @@ struct SurfaceState {
 }
 
 pub enum TouchState {
-    //start, press_time, send_move
-    MovingStart(PhysicalPosition<f64>, Instant, bool), // moving less than 50ms
-    Moving(PhysicalPosition<f64>, Instant, bool), // moving more than 50ms
+    //start, distance, send_move
+    MovingStart(PhysicalPosition<f64>, f64, bool), // moving less than distance 50px
+    Moving(PhysicalPosition<f64>, bool), // moving more than 50ms
 }
 
 pub struct App {
@@ -213,6 +214,8 @@ impl App {
             if let Some(ctx) = &self.context {
                 if self.app_state.renderer_ready() {
                     self.app_state.draw();
+
+
                     if let Err(err) = surface_state.surface.swap_buffers(ctx) {
                         log::error!("Failed to swap buffers after render: {}", err);
                     }
@@ -230,7 +233,12 @@ impl App {
     pub fn handle_back_button(&mut self) {
         log::debug!("Back button pressed, exiting...");
         if let Some(screen) = self.app_state.get_input_screen() {
-            screen.back();
+            match screen.back() {
+                ScreenManagementCmd::PopScreen => {
+                    self.app_state.pop_screen();
+                }
+                _ => {}
+            }
         }
     }
 
@@ -243,32 +251,32 @@ impl App {
             match phase {
                 winit::event::TouchPhase::Started => {
                     let should_send_move = screen.start_scroll((location.x, location.y));
-                    self.touch_state.insert(id, TouchState::MovingStart(location, Instant::now(), should_send_move));
+                    self.touch_state.insert(id, TouchState::MovingStart(location, 0.0, should_send_move));
                 }
                 winit::event::TouchPhase::Moved => {
                     if let Some(touch_state) = self.touch_state.get_mut(&id) {
                         match *touch_state {
-                            TouchState::MovingStart(prev_pos, start_time, should_send_move) => {
+                            TouchState::MovingStart(prev_pos, distance, should_send_move) => {
                                 //trigger to switch to moving state
+                                let diff = (location.x - prev_pos.x, location.y - prev_pos.y);
                                 if should_send_move {
-                                    let diff = (location.x - prev_pos.x, location.y - prev_pos.y);
                                     screen.scroll(diff);
                                 }
-                                if Instant::now().duration_since(start_time).as_millis() > 50 {
-                                    *touch_state = TouchState::Moving(location, Instant::now(), should_send_move);
+                                if distance > 50.0 {
+                                    *touch_state = TouchState::Moving(location, should_send_move);
                                 }
                                 else {
                                     //just update location
-                                    *touch_state = TouchState::MovingStart(location, start_time, should_send_move);
+                                    *touch_state = TouchState::MovingStart(location, distance + diff.0 + diff.1, should_send_move);
                                 }
                             }
-                            TouchState::Moving(prev_pos, _, should_send_move) => {
+                            TouchState::Moving(prev_pos, should_send_move) => {
                                 let diff = (location.x - prev_pos.x, location.y - prev_pos.y);
                                 if should_send_move {
                                     screen.scroll(diff);
                                 }
                                 //just update location
-                                *touch_state = TouchState::Moving(location, Instant::now(), should_send_move);
+                                *touch_state = TouchState::Moving(location, should_send_move);
                             }
                         }
                     }
@@ -277,7 +285,16 @@ impl App {
                     if let Some(touch_state) = self.touch_state.remove(&id) {
                         match touch_state {
                             TouchState::MovingStart(_, _, _) => {
-                                screen.press((location.x, location.y));
+                                match screen.press((location.x, location.y)) {
+                                    ScreenManagementCmd::PushScreen(screen) => {
+                                        self.app_state.push_screen(screen);
+                                    }
+                                    ScreenManagementCmd::PopScreen => {
+                                        self.app_state.pop_screen();
+                                    }
+                                    _ => {}
+
+                                }
                             }
                             _ => {}
                         }
