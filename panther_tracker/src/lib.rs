@@ -6,7 +6,6 @@ use jni::sys::jobject;
 use log::info;
 use raw_window_handle::HasRawDisplayHandle;
 use winit::event::{Event, WindowEvent};
-use winit::event::WindowEvent::KeyboardInput;
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder};
 use winit::platform::android::activity::AndroidApp;
 use crate::app::App;
@@ -37,7 +36,7 @@ fn set_max_framerate(android_app: &AndroidApp) {
         info!("Mode {}: {}x{}@{}", index, width, height, refresh_rate);
     }
 
-    let mut max_framerate_mode = modes.iter()
+    let max_framerate_mode = modes.iter()
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap()).unwrap();
     info!("Max framerate: {}", max_framerate_mode.1);
 
@@ -56,7 +55,7 @@ fn set_max_framerate(android_app: &AndroidApp) {
 
 }
 
-fn run(mut event_loop: EventLoop<()>) {
+fn run(event_loop: EventLoop<()>) {
     info!("Running mainloop...");
 
     let raw_display = event_loop.raw_display_handle();
