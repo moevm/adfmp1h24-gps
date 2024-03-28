@@ -1,8 +1,8 @@
 use std::ffi::{CStr, CString};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 use glutin::display::{Display, GlDisplay};
-use log::info;
+use log::{error, info};
 use winit::dpi::PhysicalPosition;
 use crate::render::screens::main::MainScreen;
 use crate::render::screens::ScreenTrait;
@@ -37,8 +37,17 @@ pub fn get_gl_string(gl: &gl::Gl, variant: gl::types::GLenum) -> Option<&'static
     }
 }
 
-pub static SURFACE_WIDTH: AtomicI32 = AtomicI32::new(0);
-pub static SURFACE_HEIGHT: AtomicI32 = AtomicI32::new(0);
+pub fn check_gl_errors(gl: &gl::Gl) {
+    unsafe {
+        let mut err = gl.GetError();
+        while err != gl::NO_ERROR {
+            error!("GL error: {}", err);
+            err = gl.GetError();
+        }
+    }
+}
+pub static SURFACE_WIDTH: AtomicU32 = AtomicU32::new(0);
+pub static SURFACE_HEIGHT: AtomicU32 = AtomicU32::new(0);
 #[derive(Debug)]
 pub enum MyInputEvent {
     Back,
@@ -84,8 +93,8 @@ impl AppState {
             Arc::new(Mutex::new(gl))
         });
 
-        SURFACE_WIDTH.store(dims.0 as i32, Ordering::Relaxed);
-        SURFACE_HEIGHT.store(dims.1 as i32, Ordering::Relaxed);
+        SURFACE_WIDTH.store(dims.0, Ordering::Relaxed);
+        SURFACE_HEIGHT.store(dims.1, Ordering::Relaxed);
 
         //nice place to create first screen
         if self.screens.len() == 0 {
@@ -109,9 +118,10 @@ impl AppState {
 
     // called repeatedly from outside
     pub fn draw(&mut self) {
-        let gl = self.gl.as_ref().unwrap().lock().unwrap();
 
         unsafe {
+
+            let gl = self.gl.as_ref().unwrap().lock().unwrap();
             gl.ClearColor(0.1, 0.1, 0.1, 1.0);
             gl.Clear(gl::COLOR_BUFFER_BIT);
         }
@@ -131,6 +141,7 @@ impl AppState {
                 i += 1;
             }
         }
+        check_gl_errors(&self.gl.as_ref().unwrap().lock().unwrap());
     }
 
     pub fn pop_screen(&mut self) {

@@ -35,7 +35,7 @@ impl CircleAnimation {
         self.start = Instant::now();
     }
 
-    pub fn cur(&mut self) -> (GLfloat, GLfloat, GLfloat) {
+    pub fn cur(&self) -> (GLfloat, GLfloat, GLfloat) {
         let elapsed_s = (Instant::now() - self.start).as_secs_f64();
         let t = (elapsed_s / self.duration).min(1.0);
 

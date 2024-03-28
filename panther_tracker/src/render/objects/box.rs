@@ -1,33 +1,26 @@
 use std::mem;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
-use crate::render::{create_shader, gl, SURFACE_HEIGHT, SURFACE_WIDTH};
+use crate::render::{check_gl_errors, create_shader, gl, SURFACE_HEIGHT, SURFACE_WIDTH};
 use crate::render::gl::{BLEND, ONE_MINUS_SRC_ALPHA, SRC_ALPHA};
 use crate::render::gl::types::{GLsizei, GLsizeiptr, GLuint};
+use crate::render::objects::SQUAD_VERTEX_DATA;
 
-#[rustfmt::skip]
-static VERTEX_DATA: [f32; 12] = [
-    -1.0, -1.0,
-    1.0,  1.0,
-    1.0, -1.0,
-    -1.0, -1.0,
-    -1.0,  1.0,
-    1.0,  1.0,
-];
 
-const VERTEX_SHADER_SOURCE: &[u8] = include_bytes!("squad-vert.glsl");
-const FRAGMENT_SHADER_SOURCE: &[u8] = include_bytes!("squad-frag.glsl");
+const VERTEX_SHADER_SOURCE: &[u8] = include_bytes!("box-vert.glsl");
+const FRAGMENT_SHADER_SOURCE: &[u8] = include_bytes!("box-frag.glsl");
 
 pub struct Squad {
     program: GLuint,
     vao: GLuint,
     vbo: GLuint,
+    fbo: GLuint,
     gl_mtx: Arc<Mutex<gl::Gl>>,
 }
 
 
 impl Squad {
-    pub fn new(gl_mtx: Arc<Mutex<gl::Gl>>) -> Self {
+    pub fn new(gl_mtx: Arc<Mutex<gl::Gl>>, color: (f32, f32, f32), bounds: (f32, f32, f32, f32)) -> Self {
         unsafe {
             let gl = gl_mtx.lock().unwrap();
 
@@ -49,6 +42,9 @@ impl Squad {
             gl.Enable(BLEND);
             gl.BlendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA);
 
+            let mut fbo = 0;
+            gl.GenFramebuffers(1, &mut fbo);
+
             let mut vao = std::mem::zeroed();
             gl.GenVertexArrays(1, &mut vao);
             gl.BindVertexArray(vao);
@@ -58,13 +54,13 @@ impl Squad {
             gl.BindBuffer(gl::ARRAY_BUFFER, vbo);
             gl.BufferData(
                 gl::ARRAY_BUFFER,
-                (VERTEX_DATA.len() * std::mem::size_of::<f32>()) as GLsizeiptr,
-                VERTEX_DATA.as_ptr() as *const _,
+                (SQUAD_VERTEX_DATA.len() * std::mem::size_of::<f32>()) as GLsizeiptr,
+                SQUAD_VERTEX_DATA.as_ptr() as *const _,
                 gl::STATIC_DRAW,
             );
 
-            let ratio_location = gl.GetUniformLocation(program, b"y_ratio\0".as_ptr() as *const _);
 
+            let ratio_location = gl.GetUniformLocation(program, b"y_ratio\0".as_ptr() as *const _);
             let dims = (SURFACE_WIDTH.load(Ordering::Relaxed) as f32, SURFACE_HEIGHT.load(Ordering::Relaxed) as f32);
             gl.Uniform1f(ratio_location, dims.1 / dims.0);
 
@@ -79,23 +75,43 @@ impl Squad {
             );
             gl.EnableVertexAttribArray(pos_attrib as GLuint);
 
+            let color_location = gl.GetUniformLocation(program, b"color\0".as_ptr() as *const _);
+            gl.Uniform3f(color_location, color.0, color.1, color.2);
+
+            let bounds_location = gl.GetUniformLocation(program, b"bounds\0".as_ptr() as *const _);
+            gl.Uniform4f(bounds_location, bounds.0, bounds.1, bounds.2, bounds.3);
+
             mem::drop(gl);
             Self {
                 program,
                 vao,
                 vbo,
                 gl_mtx,
-                // circle: circle_location,
-                // circ_anim
+                fbo,
             }
         }
     }
 
-    pub fn draw(&mut self) {
+    pub fn new_bg(gl_mtx: Arc<Mutex<gl::Gl>>, color: (f32, f32, f32)) -> Self {
+        Self::new(gl_mtx, color, (0.0, 1.0, 0.0, 1.0))
+    }
+
+    pub fn draw(&mut self, texture_id: GLuint) {
+
         let gl = self.gl_mtx.lock().unwrap();
+
+
+        // Check if the framebuffer is complete
+        // let status = unsafe { gl.CheckFramebufferStatus(gl::FRAMEBUFFER) };
+        // if status != gl::FRAMEBUFFER_COMPLETE {
+        //     panic!("Failed to create framebuffer");
+        // }
 
         unsafe {
             gl.UseProgram(self.program);
+
+            gl.BindFramebuffer(gl::FRAMEBUFFER, self.fbo);
+            gl.FramebufferTexture2D(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, gl::TEXTURE_2D, texture_id, 0);
 
             gl.BindVertexArray(self.vao);
             gl.BindBuffer(gl::ARRAY_BUFFER, self.vbo);
