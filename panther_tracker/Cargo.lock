@@ -580,6 +580,7 @@ dependencies = [
 name = "na-winit-glutin"
 version = "0.1.0"
 dependencies = [
+ "ab_glyph",
  "android_logger",
  "gl_generator",
  "glutin",

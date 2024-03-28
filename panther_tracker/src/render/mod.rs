@@ -1,13 +1,15 @@
 use std::ffi::{CStr, CString};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use glutin::display::{Display, GlDisplay};
 use log::info;
 use winit::dpi::PhysicalPosition;
+use crate::render::screens::main::MainScreen;
+use crate::render::screens::ScreenTrait;
 
-pub mod screen;
-pub mod main_screen;
-pub mod stats_screen;
+pub mod utils;
+pub mod objects;
+pub mod screens;
 
 pub mod gl {
     #![allow(clippy::all)]
@@ -35,6 +37,8 @@ pub fn get_gl_string(gl: &gl::Gl, variant: gl::types::GLenum) -> Option<&'static
     }
 }
 
+pub static SURFACE_WIDTH: AtomicI32 = AtomicI32::new(0);
+pub static SURFACE_HEIGHT: AtomicI32 = AtomicI32::new(0);
 #[derive(Debug)]
 pub enum MyInputEvent {
     Back,
@@ -42,7 +46,7 @@ pub enum MyInputEvent {
 }
 
 pub struct AppState {
-    screens: Vec<Box<dyn screen::ScreenTrait>>,
+    screens: Vec<Box<dyn ScreenTrait>>,
     exit_request: Arc<AtomicBool>,
     gl: Option<Arc<Mutex<gl::Gl>>>,
 }
@@ -57,9 +61,9 @@ impl AppState {
     }
 
     // called once on resume
-    pub fn ensure_renderer(&mut self, gl_display: &Display) {
+    pub fn ensure_renderer(&mut self, gl_display: &Display, dims: (u32, u32)) {
         let gl = self.gl.get_or_insert_with(|| {
-            log::info!("[AppState] Initializing GL...");
+            info!("[AppState] Initializing GL...");
 
             let gl = gl::Gl::load_with(|symbol| {
                 let symbol = CString::new(symbol).unwrap();
@@ -80,9 +84,12 @@ impl AppState {
             Arc::new(Mutex::new(gl))
         });
 
+        SURFACE_WIDTH.store(dims.0 as i32, Ordering::Relaxed);
+        SURFACE_HEIGHT.store(dims.1 as i32, Ordering::Relaxed);
+
         //nice place to create first screen
         if self.screens.len() == 0 {
-            self.screens.push(Box::new(main_screen::MainScreen::new(gl.clone(), self.exit_request.clone())));
+            self.screens.push(Box::new(MainScreen::new(gl.clone(), self.exit_request.clone())));
         }
     }
 
@@ -91,7 +98,7 @@ impl AppState {
         self.screens.len() > 0
     }
 
-    pub fn get_input_screen(&mut self) -> Option<&mut Box<dyn screen::ScreenTrait>> {
+    pub fn get_input_screen(&mut self) -> Option<&mut Box<dyn ScreenTrait>> {
         if self.screens.len() > 0 {
             let i = self.screens.len() - 1;
             Some(&mut self.screens[i])
@@ -102,18 +109,23 @@ impl AppState {
 
     // called repeatedly from outside
     pub fn draw(&mut self) {
+        let gl = self.gl.as_ref().unwrap().lock().unwrap();
+
+        unsafe {
+            gl.ClearColor(0.1, 0.1, 0.1, 1.0);
+            gl.Clear(gl::COLOR_BUFFER_BIT);
+        }
+
         let mut screens_len = self.screens.len();
         let mut i = 0;
         while i < screens_len {
             self.screens[i].draw();
-            if self.screens[i].is_expanded() {
-                if i > 0 {
-                    info!("[ScreenStack]Screen {} is expanded, dropping back screens...", i);
-                }
-                let new_screens = self.screens.split_off(i);
-                self.screens = new_screens;
+            if self.screens[i].is_expanded() && i > 0 {
+                info!("[ScreenStack]Screen {} is expanded, dropping back screens...", i);
+                let preserve_screens = self.screens.split_off(i);
+                self.screens = preserve_screens;
                 screens_len = self.screens.len();
-                i = 0;
+                i = 1;
             }
             else {
                 i += 1;
@@ -122,15 +134,15 @@ impl AppState {
     }
 
     pub fn pop_screen(&mut self) {
-        log::info!("[ScreenStack] Popping top screen");
+        info!("[ScreenStack] Popping top screen");
         self.screens.pop();
         if self.screens.len() == 0 {
-            self.exit_request.store(true, std::sync::atomic::Ordering::Relaxed);
+            self.exit_request.store(true, Ordering::Relaxed);
         }
     }
 
-    pub fn push_screen(&mut self, screen: Box<dyn screen::ScreenTrait>) {
-        log::info!("[ScreenStack] Pushing new screen");
+    pub fn push_screen(&mut self, screen: Box<dyn ScreenTrait>) {
+        info!("[ScreenStack] Pushing new screen");
         self.screens.push(screen);
     }
 }

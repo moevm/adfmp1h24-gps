@@ -11,6 +11,7 @@ glutin = { version = "0.31.3", features = ["egl"] }
 raw-window-handle = "0.5.0"
 android_logger = "0.13"
 jni = "0.21.1"
+ab_glyph = "0.2.23"
 
 [build-dependencies]
 gl_generator = "0.14"

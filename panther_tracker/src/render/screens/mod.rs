@@ -1,3 +1,5 @@
+pub mod main;
+
 use log::info;
 
 pub enum ScreenManagementCmd {
@@ -6,13 +8,11 @@ pub enum ScreenManagementCmd {
     PopScreen
 }
 pub trait ScreenTrait {
-    // fn process_input(&mut self, input: MyInputEvent);
     fn start_scroll(&mut self, pos: (f64, f64)) -> bool {
-        info!("YAY start scroll!!!! {:?}", pos);
         true
     }
     fn scroll(&mut self, pos: (f64, f64)) {
-        info!("YAY scroll!!!! {:?}", pos);
+        // info!("YAY scroll!!!! {:?}", pos);
     }
     fn press(&mut self, pos: (f64, f64)) -> ScreenManagementCmd {
         info!("YAY press!!!! {:?}", pos);
@@ -20,8 +20,7 @@ pub trait ScreenTrait {
         ScreenManagementCmd::None
     }
     fn back(&mut self) -> ScreenManagementCmd {
-        info!("YAY back button!!!!");
-        ScreenManagementCmd::PopScreen
+        ScreenManagementCmd::None
     }
     fn draw(&mut self);
 

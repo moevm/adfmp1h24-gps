@@ -67,9 +67,8 @@ fn run(event_loop: EventLoop<()>) {
 
 
     event_loop.run(move |event, event_loop, control_flow| {
-        log::debug!("Received Winit event: {event:?}");
+        // log::debug!("Received Winit event: {event:?}");
 
-        info!(".");
         *control_flow = ControlFlow::Wait;
         if exit_request.load(Ordering::Relaxed) {
             info!("Exit requested! Dropping app...");

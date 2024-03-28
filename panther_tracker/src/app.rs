@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Instant;
 
 use glutin::prelude::*;
 
@@ -14,7 +13,7 @@ use raw_window_handle::{HasRawWindowHandle, RawDisplayHandle, RawWindowHandle};
 use winit::dpi::PhysicalPosition;
 use winit::event_loop::EventLoopWindowTarget;
 use crate::render::AppState;
-use crate::render::screen::ScreenManagementCmd;
+use crate::render::screens::ScreenManagementCmd;
 
 
 struct SurfaceState {
@@ -32,6 +31,7 @@ pub struct App {
     winsys_display: RawDisplayHandle,
     glutin_display: Option<Display>,
     surface_state: Option<SurfaceState>,
+    surface_dims: (u32, u32),
     context: Option<glutin::context::PossiblyCurrentContext>,
     exit_request: Arc<AtomicBool>,
 
@@ -50,6 +50,7 @@ impl App {
             app_state: AppState::new(exit_request.clone()),
             exit_request,
             touch_state: BTreeMap::new(),
+            surface_dims: (0, 0)
         }
     }
 }
@@ -183,6 +184,8 @@ impl App {
             }
         }
 
+        self.surface_dims = (width, height);
+
         self.surface_state = Some(surface_state);
     }
 
@@ -192,7 +195,7 @@ impl App {
             .as_ref()
             .expect("Can't ensure render without a Glutin Display connection");
 
-        self.app_state.ensure_renderer(glutin_display);
+        self.app_state.ensure_renderer(glutin_display, self.surface_dims);
     }
 
     pub fn queue_redraw(&self) {
@@ -203,7 +206,7 @@ impl App {
     }
 
     pub fn resume<T>(&mut self, event_loop: &EventLoopWindowTarget<T>) {
-        log::debug!("Resumed, creating render state...");
+        log::info!("Resumed, creating render state...");
         self.ensure_surface_and_context(event_loop);
         self.ensure_renderer();
         self.queue_redraw();
@@ -231,14 +234,19 @@ impl App {
 
     /// can potentially call exit
     pub fn handle_back_button(&mut self) {
-        log::debug!("Back button pressed, exiting...");
         if let Some(screen) = self.app_state.get_input_screen() {
             match screen.back() {
                 ScreenManagementCmd::PopScreen => {
                     self.app_state.pop_screen();
                 }
+                ScreenManagementCmd::PushScreen(screen) => {
+                    self.app_state.push_screen(screen);
+                }
                 _ => {}
             }
+        }
+        else {
+            log::warn!("Back button pressed, but no screen to send it to");
         }
     }
 
@@ -267,7 +275,7 @@ impl App {
                                 }
                                 else {
                                     //just update location
-                                    *touch_state = TouchState::MovingStart(location, distance + diff.0 + diff.1, should_send_move);
+                                    *touch_state = TouchState::MovingStart(location, distance + diff.0.abs() + diff.1.abs(), should_send_move);
                                 }
                             }
                             TouchState::Moving(prev_pos, should_send_move) => {
