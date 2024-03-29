@@ -5,4 +5,4 @@ export ANDROID_HOME="/home/skygrel19/Android/Sdk"
 cargo ndk -t arm64-v8a -o app/src/main/jniLibs/ --platform 34 build
 ./gradlew build
 ./gradlew installDebug
-adb shell am start -n co.realfit.nawinitglutin/android.app.NativeActivity
+adb shell am start -n co.realfit.nawinitglutin/.MainActivity

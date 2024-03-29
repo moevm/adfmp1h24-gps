@@ -200,7 +200,7 @@ impl App {
 
     pub fn queue_redraw(&self) {
         if let Some(surface_state) = &self.surface_state {
-            log::debug!("Making Redraw Request");
+            // log::debug!("Making Redraw Request");
             surface_state.window.request_redraw();
         }
     }

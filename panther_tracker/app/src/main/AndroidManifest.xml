@@ -12,7 +12,7 @@
         android:supportsRtl="true">
         <activity
             android:screenOrientation="portrait"
-            android:name="android.app.NativeActivity"
+            android:name=".MainActivity"
             android:configChanges="screenSize|screenLayout|keyboardHidden"
             android:exported="true">
             <intent-filter>

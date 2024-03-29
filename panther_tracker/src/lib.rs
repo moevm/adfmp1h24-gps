@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use jni::JavaVM;
-use jni::objects::{JObject, JObjectArray, JValue};
-use jni::sys::jobject;
+use jni::{JavaVM, JNIEnv};
+use jni::objects::{JClass, JObject, JObjectArray, JValue};
+use jni::sys::{jdouble, jobject};
 use log::info;
 use raw_window_handle::HasRawDisplayHandle;
 use winit::event::{Event, WindowEvent};
@@ -53,6 +53,28 @@ fn set_max_framerate(android_app: &AndroidApp) {
     let window = env.call_method(&activity, "getWindow", "()Landroid/view/Window;", &[]).unwrap().l().unwrap();
     env.call_method(window, "setAttributes", "(Landroid/view/WindowManager$LayoutParams;)V", &[(&layout_params).into()]).unwrap();
 
+
+    //Register GPS
+    info!("Registering GPS...");
+
+    // get activity field locationManager
+    let location_helper_instance = env.get_field(activity, "locationHelper", "Lco/realfit/nawinitglutin/LocationHelper;").unwrap().l().unwrap();
+
+    // Now call the startLocationUpdates method
+    env.call_method(location_helper_instance, "startLocationUpdates", "()V", &[])
+        .expect("Failed to call startLocationUpdates");
+}
+
+
+#[no_mangle]
+pub extern "system" fn Java_co_realfit_nawinitglutin_LocationHelper_onLocationUpdate(
+    env: JNIEnv,
+    class: JClass,
+    latitude: jdouble,
+    longitude: jdouble,
+) {
+    // Handle the location update
+    println!("Received location update: Lat {}, Lon {}", latitude, longitude);
 }
 
 fn run(event_loop: EventLoop<()>) {

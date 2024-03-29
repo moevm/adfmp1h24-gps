@@ -1,7 +1,7 @@
 use std::mem;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
-use crate::render::{check_gl_errors, create_shader, gl, SURFACE_HEIGHT, SURFACE_WIDTH};
+use crate::render::{ create_shader, gl, SURFACE_HEIGHT, SURFACE_WIDTH};
 use crate::render::gl::{BLEND, ONE_MINUS_SRC_ALPHA, SRC_ALPHA};
 use crate::render::gl::types::{GLsizei, GLsizeiptr, GLuint};
 use crate::render::objects::SQUAD_VERTEX_DATA;
