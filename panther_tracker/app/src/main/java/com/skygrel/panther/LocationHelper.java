@@ -1,4 +1,6 @@
-package co.realfit.nawinitglutin;
+package com.skygrel.panther;
+
+import static androidx.activity.result.ActivityResultCallerKt.registerForActivityResult;
 
 import android.app.Activity;
 import android.content.Context;
@@ -8,6 +10,7 @@ import android.location.LocationManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+
 
 public class LocationHelper {
     private LocationManager locationManager;
@@ -43,6 +46,7 @@ public class LocationHelper {
             }
         };
     }
+
 
     public void startLocationUpdates() {
         new Handler(Looper.getMainLooper()).post(new Runnable() {

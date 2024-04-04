@@ -577,20 +577,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "na-winit-glutin"
-version = "0.1.0"
-dependencies = [
- "ab_glyph",
- "android_logger",
- "gl_generator",
- "glutin",
- "jni",
- "log",
- "raw-window-handle",
- "winit",
-]
-
-[[package]]
 name = "ndk"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -756,6 +742,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4586edfe4c648c71797a74c84bacb32b52b212eff5dfe2bb9f2c599844023e7"
 dependencies = [
  "ttf-parser",
+]
+
+[[package]]
+name = "panther"
+version = "0.1.0"
+dependencies = [
+ "ab_glyph",
+ "android_logger",
+ "gl_generator",
+ "glutin",
+ "jni",
+ "log",
+ "raw-window-handle",
+ "winit",
 ]
 
 [[package]]

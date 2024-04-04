@@ -58,7 +58,7 @@ fn set_max_framerate(android_app: &AndroidApp) {
     info!("Registering GPS...");
 
     // get activity field locationManager
-    let location_helper_instance = env.get_field(activity, "locationHelper", "Lco/realfit/nawinitglutin/LocationHelper;").unwrap().l().unwrap();
+    let location_helper_instance = env.get_field(activity, "locationHelper", "Lcom/skygrel/panther/LocationHelper;").unwrap().l().unwrap();
 
     // Now call the startLocationUpdates method
     env.call_method(location_helper_instance, "startLocationUpdates", "()V", &[])
@@ -67,7 +67,7 @@ fn set_max_framerate(android_app: &AndroidApp) {
 
 
 #[no_mangle]
-pub extern "system" fn Java_co_realfit_nawinitglutin_LocationHelper_onLocationUpdate(
+pub extern "system" fn Java_com_skygrel_panther_LocationHelper_onLocationUpdate(
     env: JNIEnv,
     class: JClass,
     latitude: jdouble,
