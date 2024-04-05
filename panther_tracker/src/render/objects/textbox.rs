@@ -12,7 +12,7 @@ use crate::render::utils::position::FixedPosition;
 const VERTEX_SHADER_SOURCE: &[u8] = include_bytes!("image-vert.glsl");
 const FRAGMENT_SHADER_SOURCE: &[u8] = include_bytes!("image-frag.glsl");
 
-pub struct Image {
+pub struct TextBox {
     program: GLuint,
     vao: GLuint,
     vbo: GLuint,
@@ -21,7 +21,7 @@ pub struct Image {
     img_texture: GLuint,
 }
 
-impl Image {
+impl TextBox {
     pub fn new(gl: Arc<gl::Gl>, img: ImageData, pos: FixedPosition) -> Self {
         unsafe {
 
@@ -132,10 +132,9 @@ impl Image {
 }
 
 
-impl Drop for Image {
+impl Drop for TextBox {
     fn drop(&mut self) {
         let gl = &self.gl;
-
         unsafe {
             gl.DeleteProgram(self.program);
             gl.DeleteVertexArrays(1, &self.vao);

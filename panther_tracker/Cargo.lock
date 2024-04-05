@@ -1132,7 +1132,6 @@ version = "0.1.0"
 dependencies = [
  "ab_glyph",
  "android_logger",
- "gif",
  "gl_generator",
  "glutin",
  "image",
