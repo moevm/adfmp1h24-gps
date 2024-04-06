@@ -1,16 +1,15 @@
 use std::mem;
 use std::sync::{Arc, Mutex};
+use ab_glyph::ScaleFont;
 use image::{DynamicImage, GenericImageView};
 use log::info;
 use crate::render::{create_shader, get_surface_y_ratio, gl};
-use crate::render::gl::{BLEND, ONE_MINUS_SRC_ALPHA, SRC_ALPHA};
+use crate::render::fonts::FontData;
+use crate::render::gl::{BLEND, Gles2, ONE_MINUS_SRC_ALPHA, SRC_ALPHA};
 use crate::render::gl::types::{GLsizei, GLsizeiptr, GLuint};
-use crate::render::images::ImageData;
-use crate::render::objects::SQUAD_VERTEX_DATA;
-use crate::render::utils::position::FixedPosition;
 
-const VERTEX_SHADER_SOURCE: &[u8] = include_bytes!("image-vert.glsl");
-const FRAGMENT_SHADER_SOURCE: &[u8] = include_bytes!("image-frag.glsl");
+const VERTEX_SHADER_SOURCE: &[u8] = include_bytes!("textbox-vert.glsl");
+const FRAGMENT_SHADER_SOURCE: &[u8] = include_bytes!("textbox-frag.glsl");
 
 pub struct TextBox {
     program: GLuint,
@@ -18,13 +17,74 @@ pub struct TextBox {
     vbo: GLuint,
     fbo: GLuint,
     gl: Arc<gl::Gl>,
-    img_texture: GLuint,
+    font_table: FontData,
+
+    pos: (f32, f32),
+    scale: f32,
+    triangle_cnt: usize
+}
+
+fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, font_table: &FontData, string: String) -> usize {
+
+    let mut temp_buf = vec![];
+
+    let full_width = font_table.full_width();
+    let full_height = font_table.full_height();
+
+    let single_width = font_table.single_width();
+    let single_height = font_table.single_height();
+
+    let mut cursor_pos_x = pos.0;
+    let mut cursor_pos_y = pos.1;
+    for c in string.chars() {
+        let rect = font_table.char_map.get(&c).unwrap();
+        let x = pos.0 + rect.x as f32;
+        let y = pos.1 + rect.y as f32;
+        let w = single_width as f32;
+        let h = single_height as f32;
+
+        let x_ratio = x / full_width as f32;
+        let y_ratio = y / full_height as f32;
+        let w_ratio = w / full_width as f32;
+        let h_ratio = h / full_height as f32;
+
+
+        let cell_sz = scale * (w_ratio);
+
+        let glyph_w = scale * (rect.width as f32 / full_width as f32);
+        info!("current glyph width: {}", rect.width);
+        // cursor_pos_y += pos_sz;
+
+        temp_buf.extend_from_slice(&[
+            cursor_pos_x + cell_sz, cursor_pos_y, x_ratio + w_ratio, y_ratio + h_ratio,
+            cursor_pos_x + cell_sz, cursor_pos_y + cell_sz, x_ratio + w_ratio, y_ratio,
+            cursor_pos_x, cursor_pos_y + cell_sz, x_ratio, y_ratio,
+
+            cursor_pos_x + cell_sz, cursor_pos_y, x_ratio + w_ratio, y_ratio + h_ratio,
+            cursor_pos_x, cursor_pos_y + cell_sz, x_ratio, y_ratio,
+            cursor_pos_x, cursor_pos_y, x_ratio, y_ratio + h_ratio,
+        ]);
+
+        cursor_pos_x += glyph_w + 0.02;
+        info!("new cursor x: {}", cursor_pos_x);
+    }
+
+    unsafe {
+        gl.BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl.BufferData(
+            gl::ARRAY_BUFFER,
+            (temp_buf.len() * mem::size_of::<f32>()) as GLsizeiptr,
+            temp_buf.as_ptr() as *const _,
+            gl::STATIC_DRAW,
+        );
+    }
+
+    temp_buf.len() / 4
 }
 
 impl TextBox {
-    pub fn new(gl: Arc<gl::Gl>, img: ImageData, pos: FixedPosition) -> Self {
+    pub fn new(gl: Arc<gl::Gl>, font: FontData, string: String, pos: (f32, f32), scale: f32) -> Self {
         unsafe {
-
             let vertex_shader = create_shader(&gl, gl::VERTEX_SHADER, VERTEX_SHADER_SOURCE);
             let fragment_shader = create_shader(&gl, gl::FRAGMENT_SHADER, FRAGMENT_SHADER_SOURCE);
 
@@ -52,13 +112,7 @@ impl TextBox {
 
             let mut vbo = std::mem::zeroed();
             gl.GenBuffers(1, &mut vbo);
-            gl.BindBuffer(gl::ARRAY_BUFFER, vbo);
-            gl.BufferData(
-                gl::ARRAY_BUFFER,
-                (SQUAD_VERTEX_DATA.len() * std::mem::size_of::<f32>()) as GLsizeiptr,
-                SQUAD_VERTEX_DATA.as_ptr() as *const _,
-                gl::STATIC_DRAW,
-            );
+            let triangle_cnt = build_vertex_buffer(&gl, &pos, scale, vbo, &font, string);
 
 
             let ratio_location = gl.GetUniformLocation(program, b"y_ratio\0".as_ptr() as *const _);
@@ -71,20 +125,24 @@ impl TextBox {
                 2,
                 gl::FLOAT,
                 0,
-                2 * mem::size_of::<f32>() as GLsizei,
+                4 * mem::size_of::<f32>() as GLsizei,
                 std::ptr::null(),
             );
             gl.EnableVertexAttribArray(pos_attrib as GLuint);
 
-            let bounds_location = gl.GetUniformLocation(program, b"bounds\0".as_ptr() as *const _);
+            let texcoord_attrib = gl.GetAttribLocation(program, b"texcoord\0".as_ptr() as *const _);
+            gl.VertexAttribPointer(
+                texcoord_attrib as GLuint,
+                2,
+                gl::FLOAT,
+                0,
+                4 * mem::size_of::<f32>() as GLsizei,
+                (2 * mem::size_of::<f32>()) as *const _,
+            );
+            gl.EnableVertexAttribArray(texcoord_attrib as GLuint);
 
             let tex_location = gl.GetUniformLocation(program, b"tex\0".as_ptr() as *const _);
             gl.Uniform1i(tex_location, 1);
-
-            let aspect_ratio = img.height as f64 / img.width as f64;
-            let pos = pos.get(aspect_ratio);
-            info!("[img] pos: {:?}", pos);
-            gl.Uniform4f(bounds_location, pos.0 as f32, pos.1 as f32, pos.2 as f32, pos.3 as f32);
 
             Self {
                 program,
@@ -92,18 +150,20 @@ impl TextBox {
                 vbo,
                 gl,
                 fbo,
-                img_texture: img.texture_id,
+                font_table: font,
+                pos,
+                scale,
+                triangle_cnt
             }
         }
     }
 
-    pub fn new_bg(gl: Arc<gl::Gl>, img: ImageData) -> Self {
-        Self::new(gl, img, FixedPosition::new().width(1.0))
+    pub fn set_text(&mut self, string: String) {
+        self.triangle_cnt = build_vertex_buffer(&self.gl, &self.pos, self.scale, self.vbo, &self.font_table, string);
     }
 
     pub fn draw(&mut self, texture_id: GLuint) {
         let gl = &self.gl;
-
 
         // Check if the framebuffer is complete
         // let status = unsafe { gl.CheckFramebufferStatus(gl::FRAMEBUFFER) };
@@ -121,12 +181,12 @@ impl TextBox {
             gl.BindBuffer(gl::ARRAY_BUFFER, self.vbo);
 
             gl.ActiveTexture(gl::TEXTURE1);
-            gl.BindTexture(gl::TEXTURE_2D, self.img_texture);
+            gl.BindTexture(gl::TEXTURE_2D, self.font_table.texture_id);
 
             // let params = self.circ_anim.cur();
             // gl.Uniform3f(self.circle, params.0, params.1, params.2);
 
-            gl.DrawArrays(gl::TRIANGLES, 0, 6);
+            gl.DrawArrays(gl::TRIANGLES, 0, self.triangle_cnt as GLsizei);
         }
     }
 }
