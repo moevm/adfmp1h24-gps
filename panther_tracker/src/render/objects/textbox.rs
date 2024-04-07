@@ -28,44 +28,71 @@ fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, fo
 
     let mut temp_buf = vec![];
 
-    let single_width = font_table.single_width();
-    let single_height = font_table.single_height();
+    let mut prev_char = None;
 
     let mut cursor_pos_x = pos.0;
     let mut cursor_pos_y = pos.1;
     for c in string.chars() {
-        let glyph_params = font_table.glyph_params.get(&c).unwrap();
+        match c {
+            '\n' => {
+                //move cursor to new line
+                cursor_pos_x = pos.0;
 
-        info!("Char: {}. h_advance: {}, h_side_bearing: {}, v_side_bearing: {}", c,
-            glyph_params.h_advance, glyph_params.h_side_bearing, glyph_params.v_side_bearing);
+                //use height value of 'n'
+                let glyph_params = font_table.glyph_params.get(&'h').unwrap();
 
-        let raster_rect = glyph_params.texture_rect;
+                cursor_pos_y -= (glyph_params.texture_rect.height() + font_table.line_gap) * scale * 1.2;
+                prev_char = None;
+            }
+            ' ' => {
+                //just move cursor
+                //use advance value of 'n'
+                let glyph_params = font_table.glyph_params.get(&'n').unwrap();
+                cursor_pos_x += glyph_params.h_advance * scale;
+                prev_char = None;
+            }
+            _ => {
+                let glyph_params = font_table.glyph_params.get(&c).unwrap();
 
-        let x = raster_rect.min.x;
-        let y = raster_rect.min.y;
-        let w = raster_rect.width();
-        let h = raster_rect.height();
+                info!("Char: {}. h_advance: {}, h_side_bearing: {}, v_side_bearing: {}, v_advance: {}", c,
+            glyph_params.h_advance, glyph_params.h_side_bearing, glyph_params.v_side_bearing, glyph_params.v_advance);
 
+                let raster_rect = glyph_params.texture_rect;
 
-        let cell_sz_x = w * scale;
-        let cell_sz_y = h * scale;
+                let x = raster_rect.min.x;
+                let y = raster_rect.min.y;
+                let w = raster_rect.width();
+                let h = raster_rect.height();
 
-        // let glyph_pos_x =
+                let cell_sz_x = w * scale;
+                let cell_sz_y = h * scale;
 
-        let glyph_advance = cell_sz_x;
+                let prev_char = prev_char.replace(c);
+                let additional_kerning = if let Some(p) = prev_char {
+                    font_table.kern_space(p, c)
+                } else {
+                    0.0
+                };
 
-        temp_buf.extend_from_slice(&[
-            cursor_pos_x + cell_sz_x, cursor_pos_y, x + w, y + h,
-            cursor_pos_x + cell_sz_x, cursor_pos_y + cell_sz_y, x + w, y,
-            cursor_pos_x, cursor_pos_y + cell_sz_y, x, y,
+                let glyph_advance = (glyph_params.h_advance + additional_kerning) * scale;
 
-            cursor_pos_x + cell_sz_x, cursor_pos_y, x + w, y + h,
-            cursor_pos_x, cursor_pos_y + cell_sz_y, x, y,
-            cursor_pos_x, cursor_pos_y, x, y + h,
-        ]);
+                let glyph_x_fixed = cursor_pos_x + glyph_params.h_side_bearing * scale;
+                let glyph_y_fixed = cursor_pos_y + glyph_params.v_side_bearing * scale;
 
-        cursor_pos_x += glyph_advance + 0.02;
-        info!("new cursor x: {}", cursor_pos_x);
+                temp_buf.extend_from_slice(&[
+                    glyph_x_fixed + cell_sz_x, glyph_y_fixed, x + w, y + h,
+                    glyph_x_fixed + cell_sz_x, glyph_y_fixed + cell_sz_y, x + w, y,
+                    glyph_x_fixed, glyph_y_fixed + cell_sz_y, x, y,
+
+                    glyph_x_fixed + cell_sz_x, glyph_y_fixed, x + w, y + h,
+                    glyph_x_fixed, glyph_y_fixed + cell_sz_y, x, y,
+                    glyph_x_fixed, glyph_y_fixed, x, y + h,
+                ]);
+
+                cursor_pos_x += glyph_advance;
+                info!("new cursor x: {}", cursor_pos_x);
+            }
+        }
     }
 
     unsafe {

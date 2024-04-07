@@ -6,7 +6,8 @@ use crate::render::gl;
 use crate::render::gl::Gles2;
 use crate::render::gl::types::GLuint;
 
-pub static QUEENSIDES_FONT: &[u8] = include_bytes!("../../resources/fonts/queensides.ttf");
+static QUEENSIDES_FONT: &[u8] = include_bytes!("../../resources/fonts/queensides.ttf");
+static SPARKY_STONES_FONT: &[u8] = include_bytes!("../../resources/fonts/SparkyStones.ttf");
 
 #[derive(Clone)]
 pub struct GlyphParams {
@@ -45,39 +46,57 @@ pub struct FontLoader {
     fonts: BTreeMap<String, FontData>
 }
 
-const FONT_RASTER_SIZE: usize = 200;
+const GLYPH_CELL_SIZE: usize = 300;
+const GLYPH_RASTER_SIZE: f32 = 300.0;
 const GRID_SIZE: usize = 10;
 
 pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
-    let font = FontRef::try_from_slice(font).unwrap().into_scaled(300.0f32);
+    let font = FontRef::try_from_slice(font).unwrap().into_scaled(GLYPH_RASTER_SIZE);
 
     let mut glyph_params = BTreeMap::new();
 
-    let ascent = font.ascent();
-    let descent = font.descent();
-    let line_gap = font.line_gap();
-    let height = font.height(); // ascent - descent
+    let ascent = font.ascent() / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
+    let descent = font.descent() / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
+    let line_gap = font.line_gap() / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
+    let height = font.height() / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
 
     info!("Font loaded! Ascent: {}, Descent: {}, Line gap: {}, Height: {}",
           ascent, descent, line_gap, height);  // Load all characters into grid GRID_SIZE x GRID_SIZE
 
-    let mut i = 0;
-    let mut j = 0;
-    let mut buf = vec![0u8; GRID_SIZE * GRID_SIZE * FONT_RASTER_SIZE * FONT_RASTER_SIZE];
-    for c in ('A'..='Z').into_iter().chain('a'..='z').chain('0'..='9').chain([',', '.','!', '?', '*'].into_iter()) {
+    let mut i = 1;
+    let mut j = 1;
+    let mut buf = vec![0u8; GRID_SIZE * GRID_SIZE * GLYPH_CELL_SIZE * GLYPH_CELL_SIZE];
+    for c in ('A'..='Z').into_iter().chain('a'..='z').chain('0'..='9').chain([',', '.', '!', '*', '\'', '?'].into_iter()) {
 
         let glyph_id = font.glyph_id(c);
         let glyph = glyph_id
-            .with_scale_and_position(300.0f32,
-                 ab_glyph::point(i as f32 * FONT_RASTER_SIZE as f32,
-                                 (j + 1) as f32 * FONT_RASTER_SIZE as f32));
+            .with_scale_and_position(GLYPH_RASTER_SIZE,
+                 ab_glyph::point(i as f32 * GLYPH_CELL_SIZE as f32,
+                                 (j + 1) as f32 * GLYPH_CELL_SIZE as f32));
 
-        let outline_glyph = font.outline_glyph(glyph).unwrap();
+        let outline_glyph = font.outline_glyph(glyph).unwrap_or_else(|| {
+
+            let glyph_id = font.glyph_id('x');
+            let glyph = glyph_id
+                .with_scale_and_position(GLYPH_RASTER_SIZE,
+                                         ab_glyph::point(i as f32 * GLYPH_CELL_SIZE as f32,
+                                                         (j + 1) as f32 * GLYPH_CELL_SIZE as f32));
+
+            font.outline_glyph(glyph).unwrap()
+        });
         let px_bounds = outline_glyph.px_bounds();
-        info!("px_bounds: {:?}", px_bounds);
+        info!("{}: px_bounds: {:?}", c, px_bounds);
 
-        let cell_x_offs = 1.0 / GRID_SIZE as f32;
-        let cell_y_offs = 1.0 / GRID_SIZE as f32;
+        let v_advance = font.v_advance(glyph_id) / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32); // should be 0, silly one
+        let h_advance = font.h_advance(glyph_id) / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
+
+        // let v_side_bearing = font.v_side_bearing(glyph_id) / (FONT_RASTER_SIZE as f32 * GRID_SIZE as f32);
+        let v_side_bearing = 1.0 / GRID_SIZE as f32 * (j+1) as f32 + (font.v_side_bearing(glyph_id) - px_bounds.max.y) / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
+        let h_side_bearing = -1.0 / GRID_SIZE as f32 * (i) as f32 + (font.h_side_bearing(glyph_id) + px_bounds.min.x) / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
+
+        let frac_w = px_bounds.width() / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
+        let frac_h = px_bounds.height() / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
+
         // fraction 0..1 in the whole texture
         let mut texture_rect = Rect {
             min: Point {
@@ -85,20 +104,15 @@ pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
                 y: 1.0 / GRID_SIZE as f32 * j as f32
             },
             max: Point {
-                x: 1.0 / GRID_SIZE as f32 * (i + 1) as f32,
-                y: 1.0 / GRID_SIZE as f32 * (j + 1) as f32
+                x: 1.0 / GRID_SIZE as f32 * i as f32 + frac_w,
+                y: 1.0 / GRID_SIZE as f32 * j as f32 + frac_h
             }
         };
 
-        let v_advance = font.v_advance(glyph_id);
-        let h_advance = font.h_advance(glyph_id);
-        let v_side_bearing = font.v_side_bearing(glyph_id);
-        let h_side_bearing = font.h_side_bearing(glyph_id);
-
         outline_glyph.draw(|x, y, v| {
-            let x = x + i * FONT_RASTER_SIZE as u32;
-            let y = y + j * FONT_RASTER_SIZE as u32;
-            let idx = (y * GRID_SIZE as u32 * FONT_RASTER_SIZE as u32 + x) as usize;
+            let x = x + i * GLYPH_CELL_SIZE as u32;
+            let y = y + j * GLYPH_CELL_SIZE as u32;
+            let idx = (y * GRID_SIZE as u32 * GLYPH_CELL_SIZE as u32 + x) as usize;
             buf[idx] = (v * 255.0) as u8;
         });
 
@@ -112,11 +126,11 @@ pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
         });
 
         i += 1;
-        if i as usize == GRID_SIZE {
+        if i as usize == GRID_SIZE - 1 {
             i = 0;
             j += 1;
         }
-        if j as usize >= GRID_SIZE {
+        if j as usize >= GRID_SIZE - 1 {
             error!("Font grid too small, font loaded partially");
             break;
         }
@@ -133,8 +147,8 @@ pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
             gl::TEXTURE_2D,
             0,
             gl::R8 as i32,
-            GRID_SIZE as i32 * FONT_RASTER_SIZE as i32,
-            GRID_SIZE as i32 * FONT_RASTER_SIZE as i32,
+            GRID_SIZE as i32 * GLYPH_CELL_SIZE as i32,
+            GRID_SIZE as i32 * GLYPH_CELL_SIZE as i32,
             0,
             gl::RED,
             gl::UNSIGNED_BYTE,
@@ -158,7 +172,8 @@ impl FontLoader {
 
         fonts.insert("queensides".to_string(),
                      load_font(&gl, QUEENSIDES_FONT));
-
+        fonts.insert("sparky-stones".to_string(),
+                     load_font(&gl, SPARKY_STONES_FONT));
 
 
         FontLoader {

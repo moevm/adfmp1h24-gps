@@ -1,16 +1,13 @@
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
-use ab_glyph::{Font, FontRef};
 use crate::render::{check_gl_errors, gl, SURFACE_HEIGHT, SURFACE_WIDTH};
 use crate::render::fonts::get_font;
-use crate::render::images::ImageData;
 use crate::render::objects::r#box::Squad;
 use crate::render::objects::textbox::TextBox;
 use crate::render::screens::{ScreenManagementCmd, ScreenRendering, ScreenTrait};
 use crate::render::screens::stats::StatsScreen;
 use crate::render::utils::circle_animation::CircleAnimation;
-use crate::render::utils::position::FixedPosition;
 
 
 pub struct MainScreen {
@@ -30,7 +27,7 @@ impl MainScreen {
 
 
         let font = get_font("queensides").unwrap();
-        let text = TextBox::new(gl.clone(), font, "ABCDEFG".to_string(), (0.1, 0.5), 2.0);
+        let text = TextBox::new(gl.clone(), font, "Panther\ntracker".to_string(), (0.1, 1.9), 2.0);
 
         let circ_anim = CircleAnimation::new(1.0, [(0.5, 0.5, 0.5), (-0.5, -0.2, 0.0), (0.0, 2.0, 3.0)]);
 
@@ -43,7 +40,7 @@ impl MainScreen {
             exit_request,
             start: Instant::now(),
             screen_rendering,
-            text
+            text,
         }
     }
 }

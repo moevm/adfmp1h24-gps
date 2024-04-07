@@ -12,9 +12,11 @@ void main() {
 
     float intencity = texture(tex, v_texcoord).r;
     if (intencity > 0.01) {
-        fragColor = vec4(1.0, 0.0, 0.0, intencity);
+        //cute rainbow based on position
+        vec3 color = vec3(0.5 + 0.5 * sin(v_position.x), 0.5 + 0.5 * sin(v_position.y - 0.7), 0.5 + 0.5 * sin(v_position.x + v_position.y));
+        fragColor = vec4(color, intencity);
     }
     else {
-        fragColor = vec4(0.5, 0.8, 0.9, 0.4);
+        discard;
     }
 }
