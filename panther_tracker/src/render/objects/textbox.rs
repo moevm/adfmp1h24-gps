@@ -25,7 +25,6 @@ pub struct TextBox {
 }
 
 fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, font_table: &FontData, string: String) -> usize {
-
     let mut temp_buf = vec![];
 
     let mut prev_char = None;
@@ -125,9 +124,6 @@ impl TextBox {
 
             gl.DeleteShader(vertex_shader);
             gl.DeleteShader(fragment_shader);
-
-            gl.Enable(BLEND);
-            gl.BlendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA);
 
             let mut fbo = 0;
             gl.GenFramebuffers(1, &mut fbo);

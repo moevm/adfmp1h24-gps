@@ -64,8 +64,6 @@ impl ScreenRendering {
 
             let program = gl.CreateProgram();
 
-            gl.PixelStorei(UNPACK_ALIGNMENT, 1);
-
             gl.AttachShader(program, vertex_shader);
             gl.AttachShader(program, fragment_shader);
 
@@ -75,9 +73,6 @@ impl ScreenRendering {
 
             gl.DeleteShader(vertex_shader);
             gl.DeleteShader(fragment_shader);
-
-            gl.Enable(BLEND);
-            gl.BlendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA);
 
             let mut vao = std::mem::zeroed();
             gl.GenVertexArrays(1, &mut vao);

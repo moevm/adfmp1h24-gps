@@ -1,10 +1,11 @@
-use std::ffi::{CStr, CString};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 use glutin::display::{Display, GlDisplay};
 use log::{error, info};
 use winit::dpi::PhysicalPosition;
 use crate::render::fonts::load_fonts;
+use crate::render::gl::UNPACK_ALIGNMENT;
 use crate::render::images::load_images;
 use crate::render::screens::main::MainScreen;
 use crate::render::screens::ScreenTrait;
@@ -73,6 +74,24 @@ pub struct AppState {
     gl: Option<Arc<gl::Gl>>,
 }
 
+extern "system" fn gl_debug_callback(
+    source: gl::types::GLenum,
+    ty: gl::types::GLenum,
+    id: gl::types::GLuint,
+    severity: gl::types::GLenum,
+    _length: gl::types::GLsizei,
+    message: *const gl::types::GLchar,
+    _user_param: *mut c_void,
+) {
+    unsafe {
+        let message_str = CStr::from_ptr(message).to_string_lossy();
+        error!(
+            "OpenGL Debug Message:\nSource: {:?}\nType: {:?}\nID: {}\nSeverity: {:?}\nMessage: {}",
+            source, ty, id, severity, message_str
+        );
+    }
+}
+
 impl AppState {
     pub fn new(exit_request: Arc<AtomicBool>) -> Self {
 
@@ -93,18 +112,28 @@ impl AppState {
                 gl_display.get_proc_address(symbol.as_c_str()).cast()
             });
 
+            unsafe {
+                gl.PixelStorei(UNPACK_ALIGNMENT, 1);
+
+                gl.Enable(gl::BLEND);
+                gl.BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+
+                gl.Enable(gl::DEBUG_OUTPUT);
+                gl.DebugMessageCallback(Some(gl_debug_callback), std::ptr::null());
+            }
+
             load_images(&gl);
             load_fonts(&gl);
 
             if let Some(renderer) = get_gl_string(&gl, gl::RENDERER) {
-                println!("Running on {}", renderer.to_string_lossy());
+                info!("Running on {}", renderer.to_string_lossy());
             }
             if let Some(version) = get_gl_string(&gl, gl::VERSION) {
-                println!("OpenGL Version {}", version.to_string_lossy());
+                info!("OpenGL Version {}", version.to_string_lossy());
             }
 
             if let Some(shaders_version) = get_gl_string(&gl, gl::SHADING_LANGUAGE_VERSION) {
-                println!("Shaders version on {}", shaders_version.to_string_lossy());
+                info!("Shaders version on {}", shaders_version.to_string_lossy());
             }
 
             Arc::new(gl)

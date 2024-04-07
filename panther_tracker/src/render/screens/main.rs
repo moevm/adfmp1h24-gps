@@ -23,8 +23,7 @@ pub struct MainScreen {
 
 impl MainScreen {
     pub fn new(gl: Arc<gl::Gl>, exit_request: Arc<AtomicBool>) -> Self {
-        let squad = Squad::new_bg(gl.clone(), (0.4, 0.5, 0.9));
-
+        let squad = Squad::new_bg(gl.clone(), (0.05, 0.06, 0.1));
 
         let font = get_font("queensides").unwrap();
         let text = TextBox::new(gl.clone(), font, "Panther\ntracker".to_string(), (0.1, 1.9), 2.0);

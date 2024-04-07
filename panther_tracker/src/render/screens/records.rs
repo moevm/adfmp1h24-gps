@@ -26,7 +26,7 @@ pub struct RecordsScreen {
 
 impl RecordsScreen {
     pub fn new(gl: Arc<gl::Gl>, exit_request: Arc<AtomicBool>) -> Self {
-        let squad = Squad::new_bg(gl.clone(), (0.6, 0.8, 0.2));
+        let squad = Squad::new_bg(gl.clone(), (0.09, 0.02, 0.06));
 
         let img_pos = FixedPosition::new().width(0.5).left(0.25).bottom(-0.12);
 
@@ -70,7 +70,7 @@ impl ScreenTrait for RecordsScreen {
         self.screen_rendering.present();
     }
     fn scroll(&mut self, pos: (f64, f64)) {
-        self.bg_img.translate(pos.0, pos.1);
+        self.bg_img.move_pos(pos.0, pos.1);
     }
     fn is_expanded(&self) -> bool {
         Instant::now().duration_since(self.start).as_secs_f32() > 0.5

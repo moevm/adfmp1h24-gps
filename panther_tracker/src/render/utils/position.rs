@@ -1,4 +1,6 @@
 /// Box positioning in wh units
+
+#[derive(Debug, Clone, Copy)]
 pub struct FreePosition {
     left: Option<f64>,
     bottom: Option<f64>,

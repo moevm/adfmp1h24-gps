@@ -27,7 +27,7 @@ pub struct StatsScreen {
 
 impl StatsScreen {
     pub fn new(gl: Arc<gl::Gl>, exit_request: Arc<AtomicBool>) -> Self {
-        let cur_color = (0.5, 0.2, 0.9);
+        let cur_color = (0.09, 0.07, 0.02);
         let squad = Squad::new_bg(gl.clone(), cur_color);
 
         let dims = (SURFACE_WIDTH.load(Ordering::Relaxed), SURFACE_HEIGHT.load(Ordering::Relaxed));
