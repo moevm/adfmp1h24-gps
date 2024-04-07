@@ -28,44 +28,43 @@ fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, fo
 
     let mut temp_buf = vec![];
 
-    let full_width = font_table.full_width();
-    let full_height = font_table.full_height();
-
     let single_width = font_table.single_width();
     let single_height = font_table.single_height();
 
     let mut cursor_pos_x = pos.0;
     let mut cursor_pos_y = pos.1;
     for c in string.chars() {
-        let rect = font_table.char_map.get(&c).unwrap();
-        let x = pos.0 + rect.x as f32;
-        let y = pos.1 + rect.y as f32;
-        let w = single_width as f32;
-        let h = single_height as f32;
+        let glyph_params = font_table.glyph_params.get(&c).unwrap();
 
-        let x_ratio = x / full_width as f32;
-        let y_ratio = y / full_height as f32;
-        let w_ratio = w / full_width as f32;
-        let h_ratio = h / full_height as f32;
+        info!("Char: {}. h_advance: {}, h_side_bearing: {}, v_side_bearing: {}", c,
+            glyph_params.h_advance, glyph_params.h_side_bearing, glyph_params.v_side_bearing);
+
+        let raster_rect = glyph_params.texture_rect;
+
+        let x = raster_rect.min.x;
+        let y = raster_rect.min.y;
+        let w = raster_rect.width();
+        let h = raster_rect.height();
 
 
-        let cell_sz = scale * (w_ratio);
+        let cell_sz_x = w * scale;
+        let cell_sz_y = h * scale;
 
-        let glyph_w = scale * (rect.width as f32 / full_width as f32);
-        info!("current glyph width: {}", rect.width);
-        // cursor_pos_y += pos_sz;
+        // let glyph_pos_x =
+
+        let glyph_advance = cell_sz_x;
 
         temp_buf.extend_from_slice(&[
-            cursor_pos_x + cell_sz, cursor_pos_y, x_ratio + w_ratio, y_ratio + h_ratio,
-            cursor_pos_x + cell_sz, cursor_pos_y + cell_sz, x_ratio + w_ratio, y_ratio,
-            cursor_pos_x, cursor_pos_y + cell_sz, x_ratio, y_ratio,
+            cursor_pos_x + cell_sz_x, cursor_pos_y, x + w, y + h,
+            cursor_pos_x + cell_sz_x, cursor_pos_y + cell_sz_y, x + w, y,
+            cursor_pos_x, cursor_pos_y + cell_sz_y, x, y,
 
-            cursor_pos_x + cell_sz, cursor_pos_y, x_ratio + w_ratio, y_ratio + h_ratio,
-            cursor_pos_x, cursor_pos_y + cell_sz, x_ratio, y_ratio,
-            cursor_pos_x, cursor_pos_y, x_ratio, y_ratio + h_ratio,
+            cursor_pos_x + cell_sz_x, cursor_pos_y, x + w, y + h,
+            cursor_pos_x, cursor_pos_y + cell_sz_y, x, y,
+            cursor_pos_x, cursor_pos_y, x, y + h,
         ]);
 
-        cursor_pos_x += glyph_w + 0.02;
+        cursor_pos_x += glyph_advance + 0.02;
         info!("new cursor x: {}", cursor_pos_x);
     }
 

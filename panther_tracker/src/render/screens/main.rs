@@ -30,7 +30,7 @@ impl MainScreen {
 
 
         let font = get_font("queensides").unwrap();
-        let text = TextBox::new(gl.clone(), font, "Panther!".to_string(), (0.1, 0.5), 3.0);
+        let text = TextBox::new(gl.clone(), font, "ABCDEFG".to_string(), (0.1, 0.5), 2.0);
 
         let circ_anim = CircleAnimation::new(1.0, [(0.5, 0.5, 0.5), (-0.5, -0.2, 0.0), (0.0, 2.0, 3.0)]);
 

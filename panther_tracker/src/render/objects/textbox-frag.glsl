@@ -10,5 +10,11 @@ out vec4 fragColor;
 
 void main() {
 
-    fragColor = vec4(1.0, 0.0, 0.0, texture(tex, v_texcoord).r);
+    float intencity = texture(tex, v_texcoord).r;
+    if (intencity > 0.01) {
+        fragColor = vec4(1.0, 0.0, 0.0, intencity);
+    }
+    else {
+        fragColor = vec4(0.5, 0.8, 0.9, 0.4);
+    }
 }

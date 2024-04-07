@@ -1,8 +1,7 @@
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
-use ab_glyph::{Font, FontRef};
-use image::math::Rect;
-use log::error;
+use ab_glyph::{Font, FontRef, Point, PxScaleFont, Rect, ScaleFont};
+use log::{error, info};
 use crate::render::gl;
 use crate::render::gl::Gles2;
 use crate::render::gl::types::GLuint;
@@ -10,26 +9,34 @@ use crate::render::gl::types::GLuint;
 pub static QUEENSIDES_FONT: &[u8] = include_bytes!("../../resources/fonts/queensides.ttf");
 
 #[derive(Clone)]
+pub struct GlyphParams {
+    pub texture_rect: Rect,
+    pub h_advance: f32,
+    pub v_advance: f32,
+    pub h_side_bearing: f32,
+    pub v_side_bearing: f32,
+}
+
+#[derive(Clone)]
 pub struct FontData {
     pub texture_id: GLuint,
-    pub char_map: BTreeMap<char, Rect>
+    pub glyph_params: BTreeMap<char, GlyphParams>,
+    pub ascent: f32,
+    pub descent: f32,
+    pub line_gap: f32,
+    font: PxScaleFont<FontRef<'static>>
 }
 
 impl FontData {
-    pub fn full_width(&self) -> u32 {
-        (FONT_RASTER_SIZE * GRID_SIZE) as u32
+    pub fn kern_space(&self, char1: char, char2: char) -> f32 {
+        self.font.kern(self.font.glyph_id(char1), self.font.glyph_id(char2))
     }
 
-    pub fn single_width(&self) -> u32 {
-        FONT_RASTER_SIZE as u32
+    pub fn single_width(&self) -> f32 {
+        1.0 / GRID_SIZE as f32
     }
-
-    pub fn full_height(&self) -> u32 {
-        (FONT_RASTER_SIZE * GRID_SIZE) as u32
-    }
-
-    pub fn single_height(&self) -> u32 {
-        FONT_RASTER_SIZE as u32
+    pub fn single_height(&self) -> f32 {
+        1.0 / GRID_SIZE as f32
     }
 }
 
@@ -38,26 +45,55 @@ pub struct FontLoader {
     fonts: BTreeMap<String, FontData>
 }
 
-const FONT_RASTER_SIZE: usize = 300;
-const GRID_SIZE: usize = 9;
+const FONT_RASTER_SIZE: usize = 200;
+const GRID_SIZE: usize = 10;
 
-pub fn load_font(gl: &Gles2, font: &[u8]) -> FontData {
-    let font = FontRef::try_from_slice(font).unwrap();
+pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
+    let font = FontRef::try_from_slice(font).unwrap().into_scaled(300.0f32);
 
-    let mut char_map = BTreeMap::new();
+    let mut glyph_params = BTreeMap::new();
 
-    // Load all characters into grid GRID_SIZE x GRID_SIZE
+    let ascent = font.ascent();
+    let descent = font.descent();
+    let line_gap = font.line_gap();
+    let height = font.height(); // ascent - descent
+
+    info!("Font loaded! Ascent: {}, Descent: {}, Line gap: {}, Height: {}",
+          ascent, descent, line_gap, height);  // Load all characters into grid GRID_SIZE x GRID_SIZE
+
     let mut i = 0;
     let mut j = 0;
     let mut buf = vec![0u8; GRID_SIZE * GRID_SIZE * FONT_RASTER_SIZE * FONT_RASTER_SIZE];
     for c in ('A'..='Z').into_iter().chain('a'..='z').chain('0'..='9').chain([',', '.','!', '?', '*'].into_iter()) {
-        let glyph = font.glyph_id(c)
+
+        let glyph_id = font.glyph_id(c);
+        let glyph = glyph_id
             .with_scale_and_position(300.0f32,
                  ab_glyph::point(i as f32 * FONT_RASTER_SIZE as f32,
-                                 j as f32 * FONT_RASTER_SIZE as f32));
+                                 (j + 1) as f32 * FONT_RASTER_SIZE as f32));
 
         let outline_glyph = font.outline_glyph(glyph).unwrap();
-        let bounds = outline_glyph.px_bounds();
+        let px_bounds = outline_glyph.px_bounds();
+        info!("px_bounds: {:?}", px_bounds);
+
+        let cell_x_offs = 1.0 / GRID_SIZE as f32;
+        let cell_y_offs = 1.0 / GRID_SIZE as f32;
+        // fraction 0..1 in the whole texture
+        let mut texture_rect = Rect {
+            min: Point {
+                x: 1.0 / GRID_SIZE as f32 * i as f32,
+                y: 1.0 / GRID_SIZE as f32 * j as f32
+            },
+            max: Point {
+                x: 1.0 / GRID_SIZE as f32 * (i + 1) as f32,
+                y: 1.0 / GRID_SIZE as f32 * (j + 1) as f32
+            }
+        };
+
+        let v_advance = font.v_advance(glyph_id);
+        let h_advance = font.h_advance(glyph_id);
+        let v_side_bearing = font.v_side_bearing(glyph_id);
+        let h_side_bearing = font.h_side_bearing(glyph_id);
 
         outline_glyph.draw(|x, y, v| {
             let x = x + i * FONT_RASTER_SIZE as u32;
@@ -66,19 +102,21 @@ pub fn load_font(gl: &Gles2, font: &[u8]) -> FontData {
             buf[idx] = (v * 255.0) as u8;
         });
 
-        char_map.insert(c, Rect{
-            x: i * FONT_RASTER_SIZE as u32,
-            y: j * FONT_RASTER_SIZE as u32,
-            width: bounds.width() as u32,
-            height: bounds.height() as u32
+
+        glyph_params.insert(c, GlyphParams {
+            texture_rect,
+            v_advance,
+            h_advance,
+            v_side_bearing,
+            h_side_bearing
         });
 
-        j += 1;
-        if j as usize == GRID_SIZE {
-            j = 0;
-            i += 1;
+        i += 1;
+        if i as usize == GRID_SIZE {
+            i = 0;
+            j += 1;
         }
-        if i as usize >= GRID_SIZE {
+        if j as usize >= GRID_SIZE {
             error!("Font grid too small, font loaded partially");
             break;
         }
@@ -106,7 +144,11 @@ pub fn load_font(gl: &Gles2, font: &[u8]) -> FontData {
 
     FontData {
         texture_id,
-        char_map
+        glyph_params,
+        font,
+        ascent,
+        descent,
+        line_gap
     }
 }
 
