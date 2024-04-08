@@ -38,8 +38,8 @@ impl MainScreen {
         let font = get_font("queensides").unwrap();
         let panther_text = TextBox::new(gl.clone(), font.clone(), "Panther\ntracker".to_string(), (0.1, 1.9), 2.0, 0);
 
-        let start_text = TextBox::new(gl.clone(), font.clone(), "Start".to_string(), (0.3, 1.1), 2.2, 0);
-        let start_animation = StartAnimation::new(gl.clone(), (0.3, 0.1, 0.3),
+        let start_text = TextBox::new(gl.clone(), font.clone(), "Start".to_string(), (0.32, 1.1), 2.2, 0);
+        let start_animation = StartAnimation::new(gl.clone(),
                                                   FreePosition::new().left(0.2).width(0.6).bottom(1.0).height(0.3));
 
         let bottom_home_text = TextBox::new(gl.clone(), font.clone(), "Home".to_string(), (0.1, 0.1), 0.4, 1);
@@ -109,8 +109,8 @@ impl ScreenTrait for MainScreen {
         self.bg_squad.draw(texture_id);
         self.panther_text.draw(texture_id);
 
-        self.start_animation.draw(texture_id);
         self.start_text.draw(texture_id);
+        self.start_animation.draw(texture_id);
 
 
         self.bottom_home_text.draw(texture_id);
