@@ -2,9 +2,11 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use crate::render::{gl, SURFACE_HEIGHT, SURFACE_WIDTH};
+use crate::render::fonts::get_font;
 use crate::render::images::get_gif;
 use crate::render::objects::animated_image::AnimatedImage;
 use crate::render::objects::r#box::Squad;
+use crate::render::objects::textbox::TextBox;
 use crate::render::screens::{ScreenManagementCmd, ScreenRendering, ScreenTrait};
 use crate::render::screens::main::MainScreen;
 use crate::render::screens::records::RecordsScreen;
@@ -17,26 +19,30 @@ pub struct StatsScreen {
     bg_squad: Squad,
     screen_rendering: ScreenRendering,
 
-    img: AnimatedImage,
-
     exit_request: Arc<AtomicBool>,
     start: Instant,
+
+    bottom_home_text: TextBox,
+    bottom_records_text: TextBox,
+    bottom_stats_text: TextBox,
 
     cur_color: (f32, f32, f32),
 }
 
 impl StatsScreen {
     pub fn new(gl: Arc<gl::Gl>, exit_request: Arc<AtomicBool>) -> Self {
-        let cur_color = (0.09, 0.07, 0.02);
+        let cur_color = (0.4, 0.5, 0.9);
         let squad = Squad::new_bg(gl.clone(), cur_color);
 
         let dims = (SURFACE_WIDTH.load(Ordering::Relaxed), SURFACE_HEIGHT.load(Ordering::Relaxed));
 
-        let img_pos = FixedPosition::new().width(1.0).bottom(1.0);
-        let img = AnimatedImage::new(gl.clone(), get_gif("walking").unwrap(), img_pos, 0.1);
-
         let circ_anim = CircleAnimation::new(1.0, [(0.5, 0.5, 0.5), (-0.5, -0.2, 0.0), (0.0, 2.0, 3.0)]);
         let screen_rendering = ScreenRendering::new(gl.clone(), dims, circ_anim);
+
+        let font = get_font("queensides").unwrap();
+        let bottom_home_text = TextBox::new(gl.clone(), font.clone(), "Home".to_string(), (0.1, 0.1), 0.4, 1);
+        let bottom_records_text = TextBox::new(gl.clone(), font.clone(), "Records".to_string(), (0.44, 0.1), 0.4, 1);
+        let bottom_stats_text = TextBox::new(gl.clone(), font.clone(), "Stats".to_string(), (0.82, 0.1), 0.4, 1);
 
         StatsScreen {
             gl,
@@ -44,8 +50,11 @@ impl StatsScreen {
             exit_request,
             start: Instant::now(),
             screen_rendering,
-            img,
-            cur_color
+            cur_color,
+
+            bottom_home_text,
+            bottom_records_text,
+            bottom_stats_text,
         }
     }
 }
@@ -80,7 +89,10 @@ impl ScreenTrait for StatsScreen {
         self.screen_rendering.clear_texture();
 
         self.bg_squad.draw(texture_id);
-        self.img.draw(texture_id);
+
+        self.bottom_home_text.draw(texture_id);
+        self.bottom_records_text.draw(texture_id);
+        self.bottom_stats_text.draw(texture_id);
 
         self.screen_rendering.present();
     }

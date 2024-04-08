@@ -40,7 +40,7 @@ impl MainScreen {
 
         let start_text = TextBox::new(gl.clone(), font.clone(), "Start".to_string(), (0.32, 1.1), 2.2, 0);
         let start_animation = StartAnimation::new(gl.clone(),
-                                                  FreePosition::new().left(0.2).width(0.6).bottom(1.0).height(0.3));
+                                                  FreePosition::new().left(0.1).width(0.8).bottom(0.7).height(0.8));
 
         let bottom_home_text = TextBox::new(gl.clone(), font.clone(), "Home".to_string(), (0.1, 0.1), 0.4, 1);
         let bottom_records_text = TextBox::new(gl.clone(), font.clone(), "Records".to_string(), (0.44, 0.1), 0.4, 1);
@@ -69,6 +69,7 @@ impl MainScreen {
     }
 
     fn start_pressed(&mut self) {
+        self.start_animation.launch();
     }
 }
 
@@ -89,7 +90,7 @@ impl ScreenTrait for MainScreen {
 
             }
         }
-        else if pos.1 > 0.3 && pos.1 < 0.7 && pos.0 > 1.1 && pos.0 < 1.4 {
+        else if pos.0 > 0.3 && pos.0 < 0.7 && pos.1 > 1.1 && pos.1 < 1.4 {
             self.start_pressed();
             ScreenManagementCmd::None
         }
@@ -111,7 +112,6 @@ impl ScreenTrait for MainScreen {
 
         self.start_text.draw(texture_id);
         self.start_animation.draw(texture_id);
-
 
         self.bottom_home_text.draw(texture_id);
         self.bottom_records_text.draw(texture_id);
