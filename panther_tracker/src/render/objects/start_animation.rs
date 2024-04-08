@@ -14,7 +14,7 @@ pub struct StartAnimation {
     start: Instant,
     animation_start: Option<Instant>,
 
-    t_locs: [GLint; 4],
+    t_loc: GLint,
 
     img_textures: Vec<GLuint>,
     pub img_count: usize,
@@ -39,10 +39,7 @@ impl StartAnimation {
             let img_textures: Vec<_> = imgs.into_iter().map(|i| i.texture_id).collect();
             let img_count = img_textures.len();
 
-            let t_loc1 = gl.GetUniformLocation(squad.program, b"t\0".as_ptr() as *const _);
-            let t_loc2 = gl.GetUniformLocation(squad.program, b"t2\0".as_ptr() as *const _);
-            let t_loc3 = gl.GetUniformLocation(squad.program, b"t3\0".as_ptr() as *const _);
-            let t_loc4 = gl.GetUniformLocation(squad.program, b"t4\0".as_ptr() as *const _);
+            let t_loc = gl.GetUniformLocation(squad.program, b"t\0".as_ptr() as *const _);
 
             Self {
                 gl,
@@ -50,7 +47,7 @@ impl StartAnimation {
                 animation_start: None,
                 start: Instant::now(),
 
-                t_locs: [t_loc1, t_loc2, t_loc3, t_loc4],
+                t_loc,
 
 
                 img_textures,
@@ -77,7 +74,7 @@ impl StartAnimation {
     }
 
     pub fn is_finished(&mut self) -> bool {
-        self.animation_start.map(|t|t.elapsed().as_secs_f32() > 5.0).unwrap_or(false)
+        self.animation_start.map(|t|t.elapsed().as_secs_f32() > 8.0).unwrap_or(false)
     }
 
     pub fn draw(&mut self, texture_id: GLuint) {
@@ -88,8 +85,24 @@ impl StartAnimation {
             self.start.elapsed().as_secs_f32().sin() * 0.1 + 0.1
         };
 
-        let mut anim_times = [anim_time - 0.15, anim_time - 0.1, anim_time + 0.05, anim_time];
+        let mut anim_times = [anim_time - 0.1, anim_time - 0.066, anim_time - 0.033, anim_time];
         anim_times.iter_mut().for_each(|v| *v = v.clamp(0.0, 3.0));
+
+        anim_times.iter_mut().for_each(|v| {
+            match *v {
+                0.0..=1.0 => {
+                    *v = v.powf(0.8)
+                }
+                1.0..=3.0 => {
+                    *v = (*v - 1.0).powf(0.8) + 1.0
+                }
+                _ => {
+                    *v = (*v - 3.0).powf(0.8) + 2.0
+                }
+            }
+        });
+
+
 
         if self.last_frame_time.elapsed().as_secs_f64() > self.img_period {
             self.last_frame_time = Instant::now();
@@ -100,9 +113,7 @@ impl StartAnimation {
 
         self.box_prog.draw(texture_id, |gl| unsafe {
             gl.UseProgram(self.box_prog.program);
-            for (i, &v) in anim_times.iter().enumerate() {
-                gl.Uniform1f(self.t_locs[i], v);
-            }
+            gl.Uniform4f(self.t_loc, anim_times[3], anim_times[2], anim_times[1], anim_times[0]);
 
             gl.ActiveTexture(gl::TEXTURE1);
             gl.BindTexture(gl::TEXTURE_2D, self.img_textures[self.cur_frame]);

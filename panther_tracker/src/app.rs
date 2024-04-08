@@ -216,6 +216,15 @@ impl App {
         if let Some(ref surface_state) = self.surface_state {
             if let Some(ctx) = &self.context {
                 if self.app_state.renderer_ready() {
+                    match self.app_state.update() {
+                        ScreenManagementCmd::PopScreen => {
+                            self.app_state.pop_screen();
+                        }
+                        ScreenManagementCmd::PushScreen(screen) => {
+                            self.app_state.push_screen(screen);
+                        }
+                        _ => {}
+                    }
                     self.app_state.draw();
 
 

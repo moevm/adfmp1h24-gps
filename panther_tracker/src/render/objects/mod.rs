@@ -30,6 +30,7 @@ pub struct BoxProgram {
     fbo: GLuint,
     gl: Arc<gl::Gl>,
 
+    y_offset: f64,
     bounds: (f64, f64, f64, f64),
 }
 
@@ -111,7 +112,8 @@ impl BoxProgram {
                 vbo,
                 fbo,
                 gl,
-                bounds
+                bounds,
+                y_offset: 0.0
             };
 
             res.update_bounds(bounds);
@@ -125,7 +127,7 @@ impl BoxProgram {
         let gl = &self.gl;
 
         let left = bounds.0;
-        let bottom = bounds.1;
+        let bottom = bounds.1 + self.y_offset;
         let right = left + bounds.2;
         let top = bottom + bounds.3;
 
@@ -147,6 +149,11 @@ impl BoxProgram {
                 gl::STATIC_DRAW,
             );
         }
+    }
+
+    pub fn set_pos_y_offset(&mut self, offset: f64) {
+        self.y_offset = offset;
+        self.update_bounds(self.bounds);
     }
 
     pub fn update_pos(&mut self, pos: (f64, f64)) {

@@ -8,7 +8,7 @@ use crate::render::fonts::load_fonts;
 use crate::render::gl::UNPACK_ALIGNMENT;
 use crate::render::images::load_images;
 use crate::render::screens::main::MainScreen;
-use crate::render::screens::ScreenTrait;
+use crate::render::screens::{ScreenManagementCmd, ScreenTrait};
 
 pub mod utils;
 pub mod objects;
@@ -159,6 +159,15 @@ impl AppState {
             Some(&mut self.screens[i])
         } else {
             None
+        }
+    }
+
+    pub fn update(&mut self) -> ScreenManagementCmd {
+        // call input screen's update method
+        if let Some(screen) = self.get_input_screen() {
+            screen.update()
+        } else {
+            ScreenManagementCmd::None
         }
     }
 

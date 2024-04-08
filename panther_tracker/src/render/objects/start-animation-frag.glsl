@@ -2,10 +2,7 @@
 precision highp float;
 
 uniform float y_ratio;
-uniform float t;
-uniform float t2;
-uniform float t3;
-uniform float t4;
+uniform vec4 t;
 uniform sampler2D tex;
 
 in vec2 v_position; // normalized position where x 0..1, y 0..y_ratio
@@ -72,23 +69,25 @@ bool is_in_rect(float t) {
 }
 
 void main() {
-    vec4 color = vec4(0.4, 0.5, 0.9, 1.0);
-    if(is_in_rect(clamp(t, 0.0, 3.0))) {
+    fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+
+    vec4 color = vec4(0.5, 0.2, 0.9, 1.0);
+    if(is_in_rect(clamp(t.r, 0.0, 3.0))) {
+        fragColor = color;
+    }
+
+    color = vec4(0.4, 0.5, 0.9, 1.0);
+    if(is_in_rect(clamp(t.g, 0.0, 3.0))) {
         fragColor = color;
     }
 
     color = vec4(0.6, 0.8, 0.2, 1.0);
-    if(is_in_rect(clamp(t2, 0.0, 3.0))) {
-        fragColor = color;
-    }
-
-    color = vec4(0.5, 0.2, 0.9, 1.0);
-    if(is_in_rect(clamp(t3, 0.0, 3.0))) {
+    if(is_in_rect(clamp(t.b, 0.0, 3.0))) {
         fragColor = color;
     }
 
     color = vec4(1.0, 0.85, 1.0, 1.0);
-    if(is_in_rect(clamp(t4, 0.0, 3.0))) {
+    if(is_in_rect(clamp(t.a, 0.0, 3.0))) {
         fragColor = color;
 
         //render gif

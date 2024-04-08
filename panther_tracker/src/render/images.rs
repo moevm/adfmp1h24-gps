@@ -10,6 +10,9 @@ use crate::render::gl::types::GLuint;
 
 pub static PANTHER_HD: &[u8] = include_bytes!("../../resources/panther_hd.png");
 pub static PANTHER_LOGO: &[u8] = include_bytes!("../../resources/panther_logo.png");
+pub static HOME: &[u8] = include_bytes!("../../resources/home.png");
+pub static RECORDS: &[u8] = include_bytes!("../../resources/records.png");
+pub static STATS: &[u8] = include_bytes!("../../resources/stats.png");
 
 pub static GIF_RUNNING: &[u8] = include_bytes!("../../resources/running.gif");
 pub static GIF_WALKING: &[u8] = include_bytes!("../../resources/walking.gif");
@@ -74,6 +77,9 @@ impl ImageLoader {
 
         images.insert("panther_hd".to_string(), load_image(gl, image::load_from_memory(PANTHER_HD).unwrap()));
         images.insert("panther_logo".to_string(), load_image(gl, image::load_from_memory(PANTHER_LOGO).unwrap()));
+        images.insert("home".to_string(), load_image(gl, image::load_from_memory(HOME).unwrap()));
+        images.insert("records".to_string(), load_image(gl, image::load_from_memory(RECORDS).unwrap()));
+        images.insert("stats".to_string(), load_image(gl, image::load_from_memory(STATS).unwrap()));
 
         let mut gifs = BTreeMap::new();
 

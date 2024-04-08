@@ -20,19 +20,22 @@ pub struct TextBox {
     font_table: FontData,
 
     pos: (f32, f32),
+    text: String,
     scale: f32,
-    triangle_cnt: usize,
+    vert_buf: Vec<f32>,
     style: u32,
+
+    prev_y_offs: f32
 }
 
-fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, font_table: &FontData, string: String) -> usize {
+fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, font_table: &FontData, text: String) -> Vec<f32> {
     let mut temp_buf = vec![];
 
     let mut prev_char = None;
 
     let mut cursor_pos_x = pos.0;
     let mut cursor_pos_y = pos.1;
-    for c in string.chars() {
+    for c in text.chars() {
         match c {
             '\n' => {
                 //move cursor to new line
@@ -104,12 +107,11 @@ fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, fo
             gl::STATIC_DRAW,
         );
     }
-
-    temp_buf.len() / 4
+    temp_buf
 }
 
 impl TextBox {
-    pub fn new(gl: Arc<gl::Gl>, font: FontData, string: String, pos: (f32, f32), scale: f32, style: u32) -> Self {
+    pub fn new(gl: Arc<gl::Gl>, font: FontData, text: String, pos: (f32, f32), scale: f32, style: u32) -> Self {
         unsafe {
             let vertex_shader = create_shader(&gl, gl::VERTEX_SHADER, VERTEX_SHADER_SOURCE);
             let fragment_shader = create_shader(&gl, gl::FRAGMENT_SHADER, FRAGMENT_SHADER_SOURCE);
@@ -135,7 +137,7 @@ impl TextBox {
 
             let mut vbo = std::mem::zeroed();
             gl.GenBuffers(1, &mut vbo);
-            let triangle_cnt = build_vertex_buffer(&gl, &pos, scale, vbo, &font, string);
+            let vert_buf = build_vertex_buffer(&gl, &pos, scale, vbo, &font, text.clone());
 
 
             let ratio_location = gl.GetUniformLocation(program, b"y_ratio\0".as_ptr() as *const _);
@@ -178,25 +180,55 @@ impl TextBox {
                 fbo,
                 font_table: font,
                 pos,
+                text,
+
                 scale,
-                triangle_cnt,
-                style
+                vert_buf,
+                style,
+
+                prev_y_offs: 0.0
             }
         }
     }
 
-    pub fn set_text(&mut self, string: String) {
-        self.triangle_cnt = build_vertex_buffer(&self.gl, &self.pos, self.scale, self.vbo, &self.font_table, string);
+    pub fn set_pos(&mut self, pos: (f32, f32)) {
+        self.pos = pos;
+        self.vert_buf = build_vertex_buffer(&self.gl, &self.pos, self.scale, self.vbo, &self.font_table, self.text.clone());
+    }
+
+    pub fn set_pos_y_offs(&mut self, pos_y_offs: f64) {
+        let movement = pos_y_offs as f32- self.prev_y_offs;
+        self.prev_y_offs = pos_y_offs as f32;
+
+        let mut vert_buf = self.vert_buf.clone();
+        let gl = &self.gl;
+
+        for i in (1..vert_buf.len()).step_by(4) {
+            let mut y = vert_buf[i];
+            y += movement;
+            vert_buf[i] = y;
+        }
+
+        unsafe {
+            gl.BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            gl.BufferData(
+                gl::ARRAY_BUFFER,
+                (vert_buf.len() * mem::size_of::<f32>()) as GLsizeiptr,
+                vert_buf.as_ptr() as *const _,
+                gl::STATIC_DRAW,
+            );
+        }
+
+        self.vert_buf = vert_buf;
+    }
+
+    pub fn set_text(&mut self, text: String) {
+        self.text = text;
+        self.vert_buf = build_vertex_buffer(&self.gl, &self.pos, self.scale, self.vbo, &self.font_table, self.text.clone());
     }
 
     pub fn draw(&mut self, texture_id: GLuint) {
         let gl = &self.gl;
-
-        // Check if the framebuffer is complete
-        // let status = unsafe { gl.CheckFramebufferStatus(gl::FRAMEBUFFER) };
-        // if status != gl::FRAMEBUFFER_COMPLETE {
-        //     panic!("Failed to create framebuffer");
-        // }
 
         unsafe {
             gl.UseProgram(self.program);
@@ -213,7 +245,7 @@ impl TextBox {
             // let params = self.circ_anim.cur();
             // gl.Uniform3f(self.circle, params.0, params.1, params.2);
 
-            gl.DrawArrays(gl::TRIANGLES, 0, self.triangle_cnt as GLsizei);
+            gl.DrawArrays(gl::TRIANGLES, 0, self.vert_buf.len() as GLsizei / 4);
         }
     }
 }

@@ -1,6 +1,7 @@
 pub mod main;
 pub mod records;
 pub mod stats;
+pub mod active_training;
 
 use std::mem;
 use std::sync::{Arc, Mutex};
@@ -29,6 +30,9 @@ pub trait ScreenTrait {
         ScreenManagementCmd::None
     }
     fn back(&mut self) -> ScreenManagementCmd {
+        ScreenManagementCmd::None
+    }
+    fn update(&mut self) -> ScreenManagementCmd {
         ScreenManagementCmd::None
     }
     fn draw(&mut self);
