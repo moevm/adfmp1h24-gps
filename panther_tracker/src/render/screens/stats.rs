@@ -52,7 +52,24 @@ impl StatsScreen {
 
 impl ScreenTrait for StatsScreen {
     fn press(&mut self, pos: (f64, f64)) -> ScreenManagementCmd {
-        ScreenManagementCmd::PushScreen(Box::new(RecordsScreen::new(self.gl.clone(), self.exit_request.clone())))
+        if pos.1 < 0.25 {
+            match pos.0 {
+                x if x < 0.33 => {
+                    ScreenManagementCmd::PushScreen(Box::new(MainScreen::new(self.gl.clone(), self.exit_request.clone())))
+                }
+                x if x < 0.66 => {
+                    ScreenManagementCmd::PushScreen(Box::new(RecordsScreen::new(self.gl.clone(), self.exit_request.clone())))
+                }
+                _ => {
+                    // ScreenManagementCmd::PushScreen(Box::new(StatsScreen::new(self.gl.clone(), self.exit_request.clone())))
+                    ScreenManagementCmd::None
+                }
+
+            }
+        }
+        else {
+            ScreenManagementCmd::None
+        }
     }
     fn back(&mut self) -> ScreenManagementCmd {
         // self.exit_request.store(true, Ordering::Relaxed);
@@ -77,6 +94,6 @@ impl ScreenTrait for StatsScreen {
         self.bg_squad.set_color(self.cur_color);
     }
     fn is_expanded(&self) -> bool {
-        Instant::now().duration_since(self.start).as_secs_f32() > 0.5
+        Instant::now().duration_since(self.start).as_secs_f32() > 1.0
     }
 }

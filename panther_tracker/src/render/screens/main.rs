@@ -4,10 +4,13 @@ use std::time::Instant;
 use crate::render::{check_gl_errors, gl, SURFACE_HEIGHT, SURFACE_WIDTH};
 use crate::render::fonts::get_font;
 use crate::render::objects::r#box::Squad;
+use crate::render::objects::start_animation::StartAnimation;
 use crate::render::objects::textbox::TextBox;
 use crate::render::screens::{ScreenManagementCmd, ScreenRendering, ScreenTrait};
+use crate::render::screens::records::RecordsScreen;
 use crate::render::screens::stats::StatsScreen;
 use crate::render::utils::circle_animation::CircleAnimation;
+use crate::render::utils::position::FreePosition;
 
 
 pub struct MainScreen {
@@ -15,7 +18,14 @@ pub struct MainScreen {
     bg_squad: Squad,
     screen_rendering: ScreenRendering,
 
-    text: TextBox,
+    panther_text: TextBox,
+
+    start_animation: StartAnimation,
+    start_text: TextBox,
+
+    bottom_home_text: TextBox,
+    bottom_records_text: TextBox,
+    bottom_stats_text: TextBox,
 
     exit_request: Arc<AtomicBool>,
     start: Instant,
@@ -26,7 +36,15 @@ impl MainScreen {
         let squad = Squad::new_bg(gl.clone(), (0.05, 0.06, 0.1));
 
         let font = get_font("queensides").unwrap();
-        let text = TextBox::new(gl.clone(), font, "Panther\ntracker".to_string(), (0.1, 1.9), 2.0);
+        let panther_text = TextBox::new(gl.clone(), font.clone(), "Panther\ntracker".to_string(), (0.1, 1.9), 2.0, 0);
+
+        let start_text = TextBox::new(gl.clone(), font.clone(), "Start".to_string(), (0.3, 1.1), 2.2, 0);
+        let start_animation = StartAnimation::new(gl.clone(), (0.3, 0.1, 0.3),
+                                                  FreePosition::new().left(0.2).width(0.6).bottom(1.0).height(0.3));
+
+        let bottom_home_text = TextBox::new(gl.clone(), font.clone(), "Home".to_string(), (0.1, 0.1), 0.4, 1);
+        let bottom_records_text = TextBox::new(gl.clone(), font.clone(), "Records".to_string(), (0.44, 0.1), 0.4, 1);
+        let bottom_stats_text = TextBox::new(gl.clone(), font.clone(), "Stats".to_string(), (0.82, 0.1), 0.4, 1);
 
         let circ_anim = CircleAnimation::new(1.0, [(0.5, 0.5, 0.5), (-0.5, -0.2, 0.0), (0.0, 2.0, 3.0)]);
 
@@ -39,15 +57,47 @@ impl MainScreen {
             exit_request,
             start: Instant::now(),
             screen_rendering,
-            text,
+            panther_text,
+
+            start_text,
+            start_animation,
+
+            bottom_home_text,
+            bottom_records_text,
+            bottom_stats_text,
         }
+    }
+
+    fn start_pressed(&mut self) {
     }
 }
 
 impl ScreenTrait for MainScreen {
     fn press(&mut self, pos: (f64, f64)) -> ScreenManagementCmd {
-        ScreenManagementCmd::PushScreen(Box::new(StatsScreen::new(self.gl.clone(), self.exit_request.clone())))
+        if pos.1 < 0.25 {
+            match pos.0 {
+                x if x < 0.33 => {
+                    // ScreenManagementCmd::PushScreen(Box::new(HomeScreen::new(self.gl.clone(), self.exit_request.clone())))
+                    ScreenManagementCmd::None
+                }
+                x if x < 0.66 => {
+                    ScreenManagementCmd::PushScreen(Box::new(RecordsScreen::new(self.gl.clone(), self.exit_request.clone())))
+                }
+                _ => {
+                    ScreenManagementCmd::PushScreen(Box::new(StatsScreen::new(self.gl.clone(), self.exit_request.clone())))
+                }
+
+            }
+        }
+        else if pos.1 > 0.3 && pos.1 < 0.7 && pos.0 > 1.1 && pos.0 < 1.4 {
+            self.start_pressed();
+            ScreenManagementCmd::None
+        }
+        else {
+            ScreenManagementCmd::None
+        }
     }
+
     fn back(&mut self) -> ScreenManagementCmd {
         self.exit_request.store(true, Ordering::Relaxed);
         ScreenManagementCmd::None
@@ -57,11 +107,19 @@ impl ScreenTrait for MainScreen {
         self.screen_rendering.clear_texture();
 
         self.bg_squad.draw(texture_id);
-        self.text.draw(texture_id);
+        self.panther_text.draw(texture_id);
+
+        self.start_animation.draw(texture_id);
+        self.start_text.draw(texture_id);
+
+
+        self.bottom_home_text.draw(texture_id);
+        self.bottom_records_text.draw(texture_id);
+        self.bottom_stats_text.draw(texture_id);
 
         self.screen_rendering.present();
     }
     fn is_expanded(&self) -> bool {
-        Instant::now().duration_since(self.start).as_secs_f32() > 0.5
+        Instant::now().duration_since(self.start).as_secs_f32() > 1.0
     }
 }

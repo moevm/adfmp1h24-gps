@@ -6,7 +6,7 @@ use log::info;
 use crate::render::{create_shader, get_surface_y_ratio, gl};
 use crate::render::fonts::FontData;
 use crate::render::gl::{BLEND, Gles2, ONE_MINUS_SRC_ALPHA, SRC_ALPHA};
-use crate::render::gl::types::{GLsizei, GLsizeiptr, GLuint};
+use crate::render::gl::types::{GLint, GLsizei, GLsizeiptr, GLuint};
 
 const VERTEX_SHADER_SOURCE: &[u8] = include_bytes!("textbox-vert.glsl");
 const FRAGMENT_SHADER_SOURCE: &[u8] = include_bytes!("textbox-frag.glsl");
@@ -21,7 +21,8 @@ pub struct TextBox {
 
     pos: (f32, f32),
     scale: f32,
-    triangle_cnt: usize
+    triangle_cnt: usize,
+    style: u32,
 }
 
 fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, font_table: &FontData, string: String) -> usize {
@@ -108,7 +109,7 @@ fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, fo
 }
 
 impl TextBox {
-    pub fn new(gl: Arc<gl::Gl>, font: FontData, string: String, pos: (f32, f32), scale: f32) -> Self {
+    pub fn new(gl: Arc<gl::Gl>, font: FontData, string: String, pos: (f32, f32), scale: f32, style: u32) -> Self {
         unsafe {
             let vertex_shader = create_shader(&gl, gl::VERTEX_SHADER, VERTEX_SHADER_SOURCE);
             let fragment_shader = create_shader(&gl, gl::FRAGMENT_SHADER, FRAGMENT_SHADER_SOURCE);
@@ -166,6 +167,9 @@ impl TextBox {
             let tex_location = gl.GetUniformLocation(program, b"tex\0".as_ptr() as *const _);
             gl.Uniform1i(tex_location, 1);
 
+            let style_location = gl.GetUniformLocation(program, b"u_style\0".as_ptr() as *const _);
+            gl.Uniform1i(style_location, style as GLint);
+
             Self {
                 program,
                 vao,
@@ -175,7 +179,8 @@ impl TextBox {
                 font_table: font,
                 pos,
                 scale,
-                triangle_cnt
+                triangle_cnt,
+                style
             }
         }
     }
