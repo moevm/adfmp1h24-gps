@@ -1,10 +1,10 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use crate::render::{gl, SURFACE_HEIGHT, SURFACE_WIDTH};
 use crate::render::fonts::get_font;
-use crate::render::images::{get_gif, get_image, PANTHER_HD};
-use crate::render::objects::animated_image::AnimatedImage;
+use crate::render::images::{get_image};
+
 use crate::render::objects::image::Image;
 use crate::render::objects::r#box::Squad;
 use crate::render::objects::textbox::TextBox;
@@ -124,7 +124,7 @@ impl ScreenTrait for RecordsScreen {
 
         self.screen_rendering.present();
     }
-    fn scroll(&mut self, pos: (f64, f64)) {
+    fn scroll(&mut self, _pos: (f64, f64)) {
 
     }
     fn is_expanded(&self) -> bool {

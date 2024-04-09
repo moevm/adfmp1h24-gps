@@ -8,6 +8,12 @@ pub struct FreePosition {
     height: Option<f64>
 }
 
+impl Default for FreePosition {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FreePosition {
     pub fn new() -> FreePosition {
         FreePosition {
@@ -56,6 +62,12 @@ pub struct FixedPosition {
     bottom: Option<f64>,
     width: Option<f64>,
     height: Option<f64>
+}
+
+impl Default for FixedPosition {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FixedPosition {

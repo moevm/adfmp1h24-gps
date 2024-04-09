@@ -1,10 +1,10 @@
 use std::mem;
 use std::sync::Arc;
-use log::info;
+
 use crate::render::{check_gl_errors, create_shader, get_surface_y_ratio, gl};
 use crate::render::gl::Gles2;
-use crate::render::gl::types::{GLint, GLsizei, GLsizeiptr, GLuint};
-use crate::render::utils::position::FreePosition;
+use crate::render::gl::types::{GLsizei, GLsizeiptr, GLuint};
+
 
 pub mod image;
 pub mod r#box;
@@ -65,8 +65,7 @@ impl BoxProgram {
             gl.GenBuffers(1, &mut vbo);
             gl.BindBuffer(gl::ARRAY_BUFFER, vbo);
             // dummy data
-            let vert_data = vec![
-                0.0, 0.0, 0.0, 0.0,
+            let vert_data = [0.0, 0.0, 0.0, 0.0,
                 1.0, 1.0, 1.0, 1.0,
                 1.0, 0.0, 1.0, 0.0];
             gl.BufferData(
@@ -133,14 +132,12 @@ impl BoxProgram {
         let top = bottom + bounds.3;
 
         unsafe {
-            let vert_data = vec![
-                left as f32, bottom as f32, 0.0, 0.0,
+            let vert_data = [left as f32, bottom as f32, 0.0, 0.0,
                 right as f32, top as f32, 1.0, 1.0,
                 right as f32, bottom as f32, 1.0, 0.0,
                 left as f32, bottom as f32, 0.0, 0.0,
                 left as f32, top as f32, 0.0, 1.0,
-                right as f32, top as f32, 1.0, 1.0,
-            ];
+                right as f32, top as f32, 1.0, 1.0];
 
             gl.BindBuffer(gl::ARRAY_BUFFER, self.vbo);
             gl.BufferData(

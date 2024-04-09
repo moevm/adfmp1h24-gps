@@ -1,11 +1,11 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::time::Instant;
-use image::{DynamicImage, GenericImageView};
-use log::info;
-use crate::render::{create_shader, get_surface_y_ratio, gl};
-use crate::render::gl::types::{GLint, GLsizei, GLsizeiptr, GLuint};
+use image::{GenericImageView};
+
+use crate::render::{gl};
+use crate::render::gl::types::{GLint, GLuint};
 use crate::render::images::ImageData;
-use crate::render::objects::{BoxProgram, SQUAD_VERTEX_DATA};
+use crate::render::objects::{BoxProgram};
 use crate::render::utils::position::FixedPosition;
 
 pub struct AnimatedImage {
@@ -79,7 +79,7 @@ impl AnimatedImage {
     }
 
     pub fn draw(&mut self, texture_id: GLuint) {
-        let gl = &self.gl;
+        let _gl = &self.gl;
 
         if self.last_frame_time.elapsed().as_secs_f64() > self.img_period {
             self.last_frame_time = Instant::now();

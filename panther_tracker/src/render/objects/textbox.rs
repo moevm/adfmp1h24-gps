@@ -1,11 +1,11 @@
 use std::mem;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use ab_glyph::ScaleFont;
-use image::{DynamicImage, GenericImageView};
+use image::{GenericImageView};
 use log::info;
 use crate::render::{create_shader, get_surface_y_ratio, gl};
 use crate::render::fonts::FontData;
-use crate::render::gl::{BLEND, Gles2, ONE_MINUS_SRC_ALPHA, SRC_ALPHA};
+use crate::render::gl::{Gles2};
 use crate::render::gl::types::{GLint, GLsizei, GLsizeiptr, GLuint};
 
 const VERTEX_SHADER_SOURCE: &[u8] = include_bytes!("textbox-vert.glsl");

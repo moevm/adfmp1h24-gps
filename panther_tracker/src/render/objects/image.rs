@@ -1,12 +1,12 @@
-use std::mem;
-use std::sync::{Arc, Mutex};
-use image::{DynamicImage, GenericImageView};
-use log::info;
-use crate::render::{create_shader, get_surface_y_ratio, gl};
-use crate::render::gl::{BLEND, ONE_MINUS_SRC_ALPHA, SRC_ALPHA};
-use crate::render::gl::types::{GLsizei, GLsizeiptr, GLuint};
+
+use std::sync::{Arc};
+use image::{GenericImageView};
+
+use crate::render::{gl};
+
+use crate::render::gl::types::{GLuint};
 use crate::render::images::ImageData;
-use crate::render::objects::{BoxProgram, SQUAD_VERTEX_DATA};
+use crate::render::objects::{BoxProgram};
 use crate::render::utils::position::FixedPosition;
 
 

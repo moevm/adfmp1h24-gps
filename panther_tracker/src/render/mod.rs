@@ -1,6 +1,6 @@
-use std::ffi::{c_char, c_void, CStr, CString};
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
+use std::ffi::{c_void, CStr, CString};
+use std::sync::{Arc};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use glutin::display::{Display, GlDisplay};
 use log::{error, info};
 use winit::dpi::PhysicalPosition;
@@ -143,18 +143,18 @@ impl AppState {
         SURFACE_HEIGHT.store(dims.1, Ordering::Relaxed);
 
         //nice place to create first screen
-        if self.screens.len() == 0 {
+        if self.screens.is_empty() {
             self.screens.push(Box::new(MainScreen::new(gl.clone(), self.exit_request.clone())));
         }
     }
 
     // called repeatedly just before draw, to determine, should we draw
     pub fn renderer_ready(&self) -> bool {
-        self.screens.len() > 0
+        !self.screens.is_empty()
     }
 
     pub fn get_input_screen(&mut self) -> Option<&mut Box<dyn ScreenTrait>> {
-        if self.screens.len() > 0 {
+        if !self.screens.is_empty() {
             let i = self.screens.len() - 1;
             Some(&mut self.screens[i])
         } else {
@@ -194,13 +194,13 @@ impl AppState {
                 i += 1;
             }
         }
-        check_gl_errors(&self.gl.as_ref().unwrap());
+        check_gl_errors(self.gl.as_ref().unwrap());
     }
 
     pub fn pop_screen(&mut self) {
         info!("[ScreenStack] Popping top screen");
         self.screens.pop();
-        if self.screens.len() == 0 {
+        if self.screens.is_empty() {
             self.exit_request.store(true, Ordering::Relaxed);
         }
     }

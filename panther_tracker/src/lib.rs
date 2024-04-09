@@ -68,8 +68,8 @@ fn set_max_framerate(android_app: &AndroidApp) {
 
 #[no_mangle]
 pub extern "system" fn Java_com_skygrel_panther_LocationHelper_onLocationUpdate(
-    env: JNIEnv,
-    class: JClass,
+    _env: JNIEnv,
+    _class: JClass,
     latitude: jdouble,
     longitude: jdouble,
 ) {

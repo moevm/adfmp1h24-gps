@@ -1,17 +1,17 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use crate::render::{gl, SURFACE_HEIGHT, SURFACE_WIDTH};
 use crate::render::fonts::get_font;
-use crate::render::images::{get_gif, get_image, PANTHER_HD};
+use crate::render::images::{get_gif, get_image};
 use crate::render::objects::animated_image::AnimatedImage;
 use crate::render::objects::image::Image;
 use crate::render::objects::r#box::Squad;
 use crate::render::objects::tab::Tab;
 use crate::render::objects::textbox::TextBox;
 use crate::render::screens::{ScreenManagementCmd, ScreenRendering, ScreenTrait};
-use crate::render::screens::main::MainScreen;
-use crate::render::screens::stats::StatsScreen;
+
+
 use crate::render::utils::circle_animation::CircleAnimation;
 use crate::render::utils::position::{FixedPosition, FreePosition};
 
@@ -82,7 +82,7 @@ impl ActiveTrainingScreen {
         let total_time_units = TextBox::new(gl.clone(), queensides.clone(), "min:sec".to_string(), (0.1, 0.95), 1.0, 0);
 
         let total_dist_val = TextBox::new(gl.clone(), queensides.clone(), "0.0".to_string(), (0.75, 1.05), 1.0, 0);
-        let total_dist_units = TextBox::new(gl.clone(), queensides.clone(), "km".to_string(), (0.77, 0.95), 1.0, 0);
+        let total_dist_units = TextBox::new(gl.clone(), queensides.clone(), "km".to_string(), (0.76, 0.95), 1.0, 0);
 
         ActiveTrainingScreen {
             gl,
@@ -118,7 +118,7 @@ impl ActiveTrainingScreen {
 }
 
 impl ScreenTrait for ActiveTrainingScreen {
-    fn press(&mut self, pos: (f64, f64)) -> ScreenManagementCmd {
+    fn press(&mut self, _pos: (f64, f64)) -> ScreenManagementCmd {
         self.paused();
         ScreenManagementCmd::None
     }
@@ -150,7 +150,7 @@ impl ScreenTrait for ActiveTrainingScreen {
 
         self.screen_rendering.present();
     }
-    fn scroll(&mut self, pos: (f64, f64)) {
+    fn scroll(&mut self, _pos: (f64, f64)) {
 
     }
     fn is_expanded(&self) -> bool {

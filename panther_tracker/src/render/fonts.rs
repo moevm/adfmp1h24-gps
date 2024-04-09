@@ -66,7 +66,7 @@ pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
     let mut i = 1;
     let mut j = 1;
     let mut buf = vec![0u8; GRID_SIZE * GRID_SIZE * GLYPH_CELL_SIZE * GLYPH_CELL_SIZE];
-    for c in ('A'..='Z').into_iter().chain('a'..='z').chain('0'..='9').chain([',', '.', '!', '*', '\'', '?', ':'].into_iter()) {
+    for c in ('A'..='Z').chain('a'..='z').chain('0'..='9').chain([',', '.', '!', '*', '\'', '?', ':'].into_iter()) {
 
         let glyph_id = font.glyph_id(c);
         let glyph = glyph_id
@@ -98,7 +98,7 @@ pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
         let frac_h = px_bounds.height() / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
 
         // fraction 0..1 in the whole texture
-        let mut texture_rect = Rect {
+        let texture_rect = Rect {
             min: Point {
                 x: 1.0 / GRID_SIZE as f32 * i as f32,
                 y: 1.0 / GRID_SIZE as f32 * j as f32
@@ -171,9 +171,9 @@ impl FontLoader {
         let mut fonts = BTreeMap::new();
 
         fonts.insert("queensides".to_string(),
-                     load_font(&gl, QUEENSIDES_FONT));
+                     load_font(gl, QUEENSIDES_FONT));
         fonts.insert("sparky-stones".to_string(),
-                     load_font(&gl, SPARKY_STONES_FONT));
+                     load_font(gl, SPARKY_STONES_FONT));
 
 
         FontLoader {

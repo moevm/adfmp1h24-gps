@@ -1,8 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
-use log::info;
-use crate::render::{check_gl_errors, gl, SURFACE_HEIGHT, SURFACE_WIDTH};
+
+use crate::render::{gl, SURFACE_HEIGHT, SURFACE_WIDTH};
 use crate::render::fonts::get_font;
 use crate::render::images::get_image;
 use crate::render::objects::image::Image;
@@ -102,7 +102,7 @@ impl MainScreen {
     }
 
     fn start_pressed(&mut self) {
-        if self.inputs_blocked == true {
+        if self.inputs_blocked {
             return;
         }
         self.inputs_blocked = true;
@@ -147,7 +147,7 @@ impl ScreenTrait for MainScreen {
 
     fn update(&mut self) -> ScreenManagementCmd {
         if self.start_animation.is_finished() {
-            return ScreenManagementCmd::PushScreen(Box::new(ActiveTrainingScreen::new(self.gl.clone(), self.exit_request.clone())));
+            ScreenManagementCmd::PushScreen(Box::new(ActiveTrainingScreen::new(self.gl.clone(), self.exit_request.clone())))
         }
         else {
             ScreenManagementCmd::None
