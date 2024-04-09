@@ -7,12 +7,13 @@ use crate::render::images::{get_gif, get_image, PANTHER_HD};
 use crate::render::objects::animated_image::AnimatedImage;
 use crate::render::objects::image::Image;
 use crate::render::objects::r#box::Squad;
+use crate::render::objects::tab::Tab;
 use crate::render::objects::textbox::TextBox;
 use crate::render::screens::{ScreenManagementCmd, ScreenRendering, ScreenTrait};
 use crate::render::screens::main::MainScreen;
 use crate::render::screens::stats::StatsScreen;
 use crate::render::utils::circle_animation::CircleAnimation;
-use crate::render::utils::position::FixedPosition;
+use crate::render::utils::position::{FixedPosition, FreePosition};
 
 
 pub struct ActiveTrainingScreen {
@@ -21,23 +22,67 @@ pub struct ActiveTrainingScreen {
 
     screen_rendering: ScreenRendering,
 
+    play: Image,
+    walking_gif: AnimatedImage,
+
     exit_request: Arc<AtomicBool>,
     start: Instant,
 
-    test_text: TextBox,
+    tab1: Tab,
+    tab2: Tab,
+    tab3: Tab,
+
+    tab_label_1: TextBox,
+    tab_label_2: TextBox,
+    tab_label_3: TextBox,
+
+    //total
+    total_time_val: TextBox,
+    total_time_units: TextBox,
+
+    total_dist_val: TextBox,
+    total_dist_units: TextBox,
+
+
+    is_pause: bool
 }
 
 impl ActiveTrainingScreen {
     pub fn new(gl: Arc<gl::Gl>, exit_request: Arc<AtomicBool>) -> Self {
-        let squad = Squad::new_bg(gl.clone(), (0.6, 0.8, 0.2));
+        let squad = Squad::new_bg(gl.clone(), (0.4, 0.3, 0.5));
 
         let dims = (SURFACE_WIDTH.load(Ordering::Relaxed), SURFACE_HEIGHT.load(Ordering::Relaxed));
 
         let circ_anim = CircleAnimation::new(1.0, [(0.5, 0.5, 0.5), (-0.5, -0.2, 0.0), (0.0, 2.0, 3.0)]);
         let screen_rendering = ScreenRendering::new(gl.clone(), dims, circ_anim);
 
-        let font = get_font("queensides").unwrap();
-        let test_text = TextBox::new(gl.clone(), font, "doing some kind of\nrunning or idk".to_string(), (0.2, 0.9), 1.0, 1);
+        let sparky_stones = get_font("sparky-stones").unwrap();
+        let queensides = get_font("queensides").unwrap();
+
+        let mut pos = FreePosition::new().bottom(-0.5).left(0.0).width(1.0)
+            .height(1.8);
+        let tab1 = Tab::new(gl.clone(), (0.05, 0.2, 0.3), pos, 0.2);
+
+        pos = pos.height(1.45);
+        let tab2 = Tab::new(gl.clone(), (0.15, 0.1, 0.3), pos, 0.4);
+
+        pos = pos.height(1.1);
+        let tab3 = Tab::new(gl.clone(), (0.3, 0.05, 0.3), pos, 0.6);
+
+        let tab_label_1 = TextBox::new(gl.clone(), sparky_stones.clone(), "total".to_string(), (0.25, 1.21), 0.5, 0);
+        let tab_label_2 = TextBox::new(gl.clone(), sparky_stones.clone(), "cur".to_string(), (0.47, 0.86), 0.5, 0);
+        let tab_label_3 = TextBox::new(gl.clone(), sparky_stones.clone(), "avg".to_string(), (0.67, 0.51), 0.5, 0);
+
+        let play = Image::new(gl.clone(), get_image("play").unwrap(),
+                              FixedPosition::new().bottom(1.7).width(0.25).left(0.15), Some((0.1, 0.9, 0.3)));
+        let walking_gif = AnimatedImage::new(gl.clone(), get_gif("walking").unwrap(),
+                                             FixedPosition::new().bottom(1.7).width(0.55).left(0.45), 0.08);
+
+        let total_time_val = TextBox::new(gl.clone(), queensides.clone(), "00:00".to_string(), (0.1, 1.05), 1.0, 0);
+        let total_time_units = TextBox::new(gl.clone(), queensides.clone(), "min:sec".to_string(), (0.1, 0.95), 1.0, 0);
+
+        let total_dist_val = TextBox::new(gl.clone(), queensides.clone(), "0.0".to_string(), (0.75, 1.05), 1.0, 0);
+        let total_dist_units = TextBox::new(gl.clone(), queensides.clone(), "km".to_string(), (0.77, 0.95), 1.0, 0);
 
         ActiveTrainingScreen {
             gl,
@@ -47,35 +92,39 @@ impl ActiveTrainingScreen {
             start: Instant::now(),
             screen_rendering,
 
-            test_text,
+            tab1,
+            tab2,
+            tab3,
+
+            tab_label_1,
+            tab_label_2,
+            tab_label_3,
+
+            play,
+            walking_gif,
+
+            total_time_val,
+            total_time_units,
+            total_dist_val,
+            total_dist_units,
+
+            is_pause: false
         }
+    }
+
+    fn paused(&mut self) {
+        self.is_pause = !self.is_pause;
     }
 }
 
 impl ScreenTrait for ActiveTrainingScreen {
     fn press(&mut self, pos: (f64, f64)) -> ScreenManagementCmd {
-        if pos.1 < 0.25 {
-            match pos.0 {
-                x if x < 0.33 => {
-                    ScreenManagementCmd::PushScreen(Box::new(MainScreen::new(self.gl.clone(), self.exit_request.clone())))
-                }
-                x if x < 0.66 => {
-                    // ScreenManagementCmd::PushScreen(Box::new(RecordsScreen::new(self.gl.clone(), self.exit_request.clone())))
-                    ScreenManagementCmd::None
-                }
-                _ => {
-                    ScreenManagementCmd::PushScreen(Box::new(StatsScreen::new(self.gl.clone(), self.exit_request.clone())))
-                }
-
-            }
-        }
-        else {
-            ScreenManagementCmd::None
-        }
+        self.paused();
+        ScreenManagementCmd::None
     }
     fn back(&mut self) -> ScreenManagementCmd {
-        // self.exit_request.store(true, Ordering::Relaxed);
-        ScreenManagementCmd::PushScreen(Box::new(MainScreen::new(self.gl.clone(), self.exit_request.clone())))
+        self.paused();
+        ScreenManagementCmd::None
     }
     fn draw(&mut self) {
         let texture_id = self.screen_rendering.texture_id();
@@ -83,7 +132,21 @@ impl ScreenTrait for ActiveTrainingScreen {
 
         self.bg_squad.draw(texture_id);
 
-        self.test_text.draw(texture_id);
+        self.play.draw(texture_id);
+        self.walking_gif.draw(texture_id);
+
+        self.tab1.draw(texture_id);
+        self.tab2.draw(texture_id);
+        self.tab3.draw(texture_id);
+
+        self.tab_label_1.draw(texture_id);
+        self.tab_label_2.draw(texture_id);
+        self.tab_label_3.draw(texture_id);
+
+        self.total_time_val.draw(texture_id);
+        self.total_time_units.draw(texture_id);
+        self.total_dist_val.draw(texture_id);
+        self.total_dist_units.draw(texture_id);
 
         self.screen_rendering.present();
     }
