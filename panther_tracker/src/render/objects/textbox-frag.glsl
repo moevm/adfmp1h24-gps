@@ -23,6 +23,12 @@ void main() {
             vec3 color = vec3(1.0, 0.9, 1.0);
             fragColor = vec4(color, intencity);
         }
+
+        // red color
+        if (u_style == 2) {
+            vec3 color = vec3(1.0, 0.1, 0.2);
+            fragColor = vec4(color, intencity);
+        }
     }
     else {
         discard;

@@ -13,6 +13,7 @@ android_logger = "0.13"
 jni = "0.21.1"
 ab_glyph = "0.2.23"
 image = { version = "0.25.1", features = ["gif"] }
+parking_lot = "0.12.1"
 
 [build-dependencies]
 gl_generator = "0.14"

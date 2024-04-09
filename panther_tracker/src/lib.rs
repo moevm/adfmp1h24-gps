@@ -1,9 +1,10 @@
-use std::sync::Arc;
+use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use jni::{JavaVM, JNIEnv};
 use jni::objects::{JClass, JObject, JObjectArray, JValue};
 use jni::sys::{jdouble, jobject};
 use log::info;
+use parking_lot::Mutex;
 use raw_window_handle::HasRawDisplayHandle;
 use winit::event::{Event, WindowEvent};
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder};
@@ -12,6 +13,9 @@ use crate::app::App;
 
 pub mod app;
 pub mod render;
+
+pub static JNI_ENV: Mutex<Option<usize>> = Mutex::new(None);
+pub static ACTIVITY_OBJ: Mutex<Option<JObject>> = Mutex::new(None);
 
 fn set_max_framerate(android_app: &AndroidApp) {
     let vm = unsafe { JavaVM::from_raw(android_app.vm_as_ptr() as _) }.unwrap();
@@ -57,24 +61,10 @@ fn set_max_framerate(android_app: &AndroidApp) {
     //Register GPS
     info!("Registering GPS...");
 
-    // get activity field locationManager
-    let location_helper_instance = env.get_field(activity, "locationHelper", "Lcom/skygrel/panther/LocationHelper;").unwrap().l().unwrap();
+    let raw_env = env.get_raw() as usize;
 
-    // Now call the startLocationUpdates method
-    env.call_method(location_helper_instance, "startLocationUpdates", "()V", &[])
-        .expect("Failed to call startLocationUpdates");
-}
-
-
-#[no_mangle]
-pub extern "system" fn Java_com_skygrel_panther_LocationHelper_onLocationUpdate(
-    _env: JNIEnv,
-    _class: JClass,
-    latitude: jdouble,
-    longitude: jdouble,
-) {
-    // Handle the location update
-    println!("Received location update: Lat {}, Lon {}", latitude, longitude);
+    JNI_ENV.lock().replace(raw_env);
+    ACTIVITY_OBJ.lock().replace(activity);
 }
 
 fn run(event_loop: EventLoop<()>) {

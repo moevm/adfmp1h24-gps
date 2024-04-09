@@ -1,6 +1,10 @@
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
+use jni::JNIEnv;
+use jni::objects::JClass;
+use jni::sys::jdouble;
+use crate::{ACTIVITY_OBJ, JNI_ENV};
 
 use crate::render::{gl, SURFACE_HEIGHT, SURFACE_WIDTH};
 use crate::render::fonts::get_font;
@@ -16,6 +20,69 @@ use crate::render::screens::stats::StatsScreen;
 use crate::render::utils::circle_animation::CircleAnimation;
 use crate::render::utils::position::{FixedPosition, FreePosition};
 
+pub fn request_permission_gps() {
+    let env = JNI_ENV.lock().unwrap();
+    let mut env = unsafe { JNIEnv::from_raw(env as *mut _).unwrap() };
+    let activity_lock = ACTIVITY_OBJ.lock();
+    let activity = activity_lock.as_ref().unwrap();
+
+    //check and request permissions
+    env.call_method(activity, "checkAndRequestPermissions", "()V", &[])
+        .expect("Failed to call checkAndRequestPermissions");
+}
+
+//
+// pub fn start_location_updates() {
+//     let env = JNI_ENV.lock().unwrap();
+//     let mut env = unsafe { JNIEnv::from_raw(env as *mut _).unwrap() };
+//     let activity_lock = ACTIVITY_OBJ.lock();
+//     let activity = activity_lock.as_ref().unwrap();
+//
+//     // get activity field locationManager
+//     let location_helper_instance = env.get_field(activity, "locationHelper", "Lcom/skygrel/panther/LocationHelper;").unwrap().l().unwrap();
+//
+//     // Now call the startLocationUpdates method
+//     env.call_method(location_helper_instance, "startLocationUpdates", "()V", &[])
+//         .expect("Failed to call startLocationUpdates");
+// }
+
+
+
+
+#[no_mangle]
+pub extern "system" fn Java_com_skygrel_panther_LocationHelper_onLocationUpdate(
+    _env: JNIEnv,
+    _class: JClass,
+    latitude: jdouble,
+    longitude: jdouble,
+) {
+    // Handle the location update
+    println!("Received location update: Lat {}, Lon {}", latitude, longitude);
+}
+
+pub static LOCATION_PERMISSION_GRANTED: AtomicBool = AtomicBool::new(false);
+pub static LOCATION_PERMISSION_DENIED: AtomicBool = AtomicBool::new(false);
+
+#[no_mangle]
+pub extern "system" fn Java_com_skygrel_panther_LocationHelper_onPermissionDenied(
+    _env: JNIEnv,
+    _class: JClass,
+) {
+    // Handle the location update
+    println!("Permission denied!");
+    LOCATION_PERMISSION_DENIED.store(true, Ordering::Relaxed);
+    // request_permission_gps();
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_skygrel_panther_LocationHelper_onPermissionGranted(
+    _env: JNIEnv,
+    _class: JClass,
+) {
+    // Handle the location update
+    println!("Permission granted!");
+    LOCATION_PERMISSION_GRANTED.store(true, Ordering::Relaxed);
+}
 
 pub struct MainScreen {
     gl: Arc<gl::Gl>,
@@ -24,10 +91,14 @@ pub struct MainScreen {
 
     panther_text: TextBox,
 
+    is_start_pressed: bool,
     start_animation: StartAnimation,
     start_text: TextBox,
 
     logo: Image,
+
+    no_permission_text: TextBox,
+    show_no_permission_text: bool,
 
     bottom_home_text: TextBox,
     bottom_records_text: TextBox,
@@ -75,6 +146,9 @@ impl MainScreen {
         let dims = (SURFACE_WIDTH.load(Ordering::Relaxed), SURFACE_HEIGHT.load(Ordering::Relaxed));
         let screen_rendering = ScreenRendering::new(gl.clone(), dims, circ_anim);
 
+        let no_permission_text = TextBox::new(gl.clone(), font.clone(),
+                      "No permission to access GPS data!\n\n - Enable permission manually\nin app setting".to_string(), (0.1, 0.8), 0.5, 2);
+
         MainScreen {
             gl,
             bg_squad: squad,
@@ -85,6 +159,10 @@ impl MainScreen {
 
             start_text,
             start_animation,
+            is_start_pressed: false,
+
+            no_permission_text,
+            show_no_permission_text: false,
 
             bottom_home_text,
             bottom_records_text,
@@ -132,7 +210,10 @@ impl ScreenTrait for MainScreen {
             }
         }
         else if pos.0 > 0.3 && pos.0 < 0.7 && pos.1 > 1.1 && pos.1 < 1.4 {
-            self.start_pressed();
+            if self.bot_animation.is_none() {
+                self.is_start_pressed = true;
+                request_permission_gps();
+            }
             ScreenManagementCmd::None
         }
         else {
@@ -146,12 +227,20 @@ impl ScreenTrait for MainScreen {
     }
 
     fn update(&mut self) -> ScreenManagementCmd {
+        if LOCATION_PERMISSION_GRANTED.load(Ordering::Relaxed) && self.is_start_pressed {
+            self.start_pressed();
+            self.is_start_pressed = false;
+        }
+
+        if LOCATION_PERMISSION_DENIED.load(Ordering::Relaxed) {
+            self.show_no_permission_text = true;
+        }
+
         if self.start_animation.is_finished() {
-            ScreenManagementCmd::PushScreen(Box::new(ActiveTrainingScreen::new(self.gl.clone(), self.exit_request.clone())))
+            return ScreenManagementCmd::PushScreen(Box::new(ActiveTrainingScreen::new(self.gl.clone(), self.exit_request.clone())))
         }
-        else {
-            ScreenManagementCmd::None
-        }
+
+        ScreenManagementCmd::None
     }
     fn draw(&mut self) {
         let texture_id = self.screen_rendering.texture_id();
@@ -161,6 +250,10 @@ impl ScreenTrait for MainScreen {
         self.panther_text.draw(texture_id);
 
         self.logo.draw(texture_id);
+
+        if self.show_no_permission_text {
+            self.no_permission_text.draw(texture_id);
+        }
 
         self.start_text.draw(texture_id);
         self.start_animation.draw(texture_id);

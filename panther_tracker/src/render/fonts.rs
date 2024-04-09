@@ -66,7 +66,7 @@ pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
     let mut i = 1;
     let mut j = 1;
     let mut buf = vec![0u8; GRID_SIZE * GRID_SIZE * GLYPH_CELL_SIZE * GLYPH_CELL_SIZE];
-    for c in ('A'..='Z').chain('a'..='z').chain('0'..='9').chain([',', '.', '!', '*', '\'', '?', ':'].into_iter()) {
+    for c in ('A'..='Z').chain('a'..='z').chain('0'..='9').chain([',', '.', '!', '*', '\'', '?', ':', '-'].into_iter()) {
 
         let glyph_id = font.glyph_id(c);
         let glyph = glyph_id

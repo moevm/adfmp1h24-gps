@@ -1,7 +1,5 @@
 package com.skygrel.panther;
 
-import static androidx.activity.result.ActivityResultCallerKt.registerForActivityResult;
-
 import android.app.Activity;
 import android.content.Context;
 import android.location.Location;
@@ -49,6 +47,7 @@ public class LocationHelper {
 
 
     public void startLocationUpdates() {
+        Log.i("GPS", "startLocationUpdates() call");
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             @Override
             public void run() {
@@ -57,7 +56,7 @@ public class LocationHelper {
                     Log.i("GPS", "requestLocationUpdates call success!");
                 } catch (SecurityException e) {
                     Log.e("GPS", e.toString());
-                    // Handle permission issue
+                    onPermissionDenied();
                 }
             }
         });
@@ -70,4 +69,7 @@ public class LocationHelper {
 
     // Modified to not use nativePtr
     private native void onLocationUpdate(double latitude, double longitude);
+
+    public native void onPermissionDenied();
+    public native void onPermissionGranted();
 }
