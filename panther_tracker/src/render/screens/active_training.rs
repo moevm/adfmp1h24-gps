@@ -83,7 +83,7 @@ impl GpsData {
             }
         }
 
-        if accuracy <= 4.0 {
+        if accuracy <= 5.5 {
             self.gps_acc_good = true;
             if self.initial_metric.is_none(){
                 self.initial_metric = Some(metric.clone());
