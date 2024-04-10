@@ -3,7 +3,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use jni::JNIEnv;
 use jni::objects::JClass;
-use jni::sys::jdouble;
 use crate::{ACTIVITY_OBJ, JNI_ENV};
 
 use crate::render::{gl, SURFACE_HEIGHT, SURFACE_WIDTH};
@@ -31,33 +30,19 @@ pub fn request_permission_gps() {
         .expect("Failed to call checkAndRequestPermissions");
 }
 
-//
-// pub fn start_location_updates() {
-//     let env = JNI_ENV.lock().unwrap();
-//     let mut env = unsafe { JNIEnv::from_raw(env as *mut _).unwrap() };
-//     let activity_lock = ACTIVITY_OBJ.lock();
-//     let activity = activity_lock.as_ref().unwrap();
-//
-//     // get activity field locationManager
-//     let location_helper_instance = env.get_field(activity, "locationHelper", "Lcom/skygrel/panther/LocationHelper;").unwrap().l().unwrap();
-//
-//     // Now call the startLocationUpdates method
-//     env.call_method(location_helper_instance, "startLocationUpdates", "()V", &[])
-//         .expect("Failed to call startLocationUpdates");
-// }
 
+pub fn stop_location_updates() {
+    let env = JNI_ENV.lock().unwrap();
+    let mut env = unsafe { JNIEnv::from_raw(env as *mut _).unwrap() };
+    let activity_lock = ACTIVITY_OBJ.lock();
+    let activity = activity_lock.as_ref().unwrap();
 
+    // get activity field locationManager
+    let location_helper_instance = env.get_field(activity, "locationHelper", "Lcom/skygrel/panther/LocationHelper;").unwrap().l().unwrap();
 
-
-#[no_mangle]
-pub extern "system" fn Java_com_skygrel_panther_LocationHelper_onLocationUpdate(
-    _env: JNIEnv,
-    _class: JClass,
-    latitude: jdouble,
-    longitude: jdouble,
-) {
-    // Handle the location update
-    println!("Received location update: Lat {}, Lon {}", latitude, longitude);
+    // Now call the stopLocationUpdates method
+    env.call_method(location_helper_instance, "stopLocationUpdates", "()V", &[])
+        .expect("Failed to call stopLocationUpdates");
 }
 
 pub static LOCATION_PERMISSION_GRANTED: AtomicBool = AtomicBool::new(false);
@@ -68,10 +53,8 @@ pub extern "system" fn Java_com_skygrel_panther_LocationHelper_onPermissionDenie
     _env: JNIEnv,
     _class: JClass,
 ) {
-    // Handle the location update
     println!("Permission denied!");
     LOCATION_PERMISSION_DENIED.store(true, Ordering::Relaxed);
-    // request_permission_gps();
 }
 
 #[no_mangle]
@@ -79,7 +62,6 @@ pub extern "system" fn Java_com_skygrel_panther_LocationHelper_onPermissionGrant
     _env: JNIEnv,
     _class: JClass,
 ) {
-    // Handle the location update
     println!("Permission granted!");
     LOCATION_PERMISSION_GRANTED.store(true, Ordering::Relaxed);
 }
@@ -139,7 +121,7 @@ impl MainScreen {
         let records_icon = Image::new(gl.clone(), get_image("records").unwrap(),
                                       FixedPosition::new().bottom(0.12).height(0.08).left(0.45), Some((0.6, 0.8, 0.2)));
         let stats_icon = Image::new(gl.clone(), get_image("stats").unwrap(),
-                                    FixedPosition::new().bottom(0.12).height(0.08).left(0.73), Some((0.4, 0.5, 0.9)));
+                                    FixedPosition::new().bottom(0.12).height(0.08).left(0.715), Some((0.4, 0.5, 0.9)));
 
         let circ_anim = CircleAnimation::new(1.0, [(0.5, 0.5, 0.5), (-0.5, -0.2, 0.0), (0.0, 2.0, 3.0)]);
 
@@ -209,7 +191,7 @@ impl ScreenTrait for MainScreen {
 
             }
         }
-        else if pos.0 > 0.3 && pos.0 < 0.7 && pos.1 > 1.1 && pos.1 < 1.4 {
+        else if pos.0 > 0.3 && pos.0 < 0.7 && pos.1 > 1.05 && pos.1 < 1.3 {
             if self.bot_animation.is_none() {
                 self.is_start_pressed = true;
                 request_permission_gps();

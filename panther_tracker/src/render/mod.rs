@@ -1,14 +1,17 @@
 use std::ffi::{c_void, CStr, CString};
+use std::fs::File;
+use std::io::Read;
 use std::sync::{Arc};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use glutin::display::{Display, GlDisplay};
-use log::{error, info};
+use log::{error, info, warn};
 use winit::dpi::PhysicalPosition;
 use crate::render::fonts::load_fonts;
 use crate::render::gl::UNPACK_ALIGNMENT;
 use crate::render::images::load_images;
 use crate::render::screens::main::MainScreen;
 use crate::render::screens::{ScreenManagementCmd, ScreenTrait};
+use crate::render::screens::records::{Records, RECORDS_LIST};
 
 pub mod utils;
 pub mod objects;
@@ -92,8 +95,18 @@ extern "system" fn gl_debug_callback(
     }
 }
 
+
+pub const ANDROID_DATA_PATH: &str = "/data/user/0/com.skygrel.panther/files";
 impl AppState {
     pub fn new(exit_request: Arc<AtomicBool>) -> Self {
+        // let records_path = format!("{}/records.json", ANDROID_DATA_PATH);
+        //
+        // //read test content if file exists
+        // if let Ok(file) = File::open(&records_path) {
+        //     let records: Records = serde_json::from_reader(file).unwrap();
+        //     let mut records_list = RECORDS_LIST.lock().unwrap();
+        //     *records_list = records;
+        // }
 
         AppState {
             screens: Vec::new(),

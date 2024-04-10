@@ -2,7 +2,7 @@ use std::mem;
 use std::sync::{Arc};
 use ab_glyph::ScaleFont;
 use image::{GenericImageView};
-use log::info;
+use log::{debug, info};
 use crate::render::{create_shader, get_surface_y_ratio, gl};
 use crate::render::fonts::FontData;
 use crate::render::gl::{Gles2};
@@ -57,7 +57,7 @@ fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, fo
             _ => {
                 let glyph_params = font_table.glyph_params.get(&c).unwrap();
 
-                info!("Char: {}. h_advance: {}, h_side_bearing: {}, v_side_bearing: {}, v_advance: {}", c,
+                debug!("Char: {}. h_advance: {}, h_side_bearing: {}, v_side_bearing: {}, v_advance: {}", c,
             glyph_params.h_advance, glyph_params.h_side_bearing, glyph_params.v_side_bearing, glyph_params.v_advance);
 
                 let raster_rect = glyph_params.texture_rect;
@@ -93,7 +93,7 @@ fn build_vertex_buffer(gl: &Gles2, pos: &(f32, f32), scale: f32, vbo: GLuint, fo
                 ]);
 
                 cursor_pos_x += glyph_advance;
-                info!("new cursor x: {}", cursor_pos_x);
+                debug!("new cursor x: {}", cursor_pos_x);
             }
         }
     }
@@ -197,7 +197,7 @@ impl TextBox {
     }
 
     pub fn set_pos_y_offs(&mut self, pos_y_offs: f64) {
-        let movement = pos_y_offs as f32- self.prev_y_offs;
+        let movement = pos_y_offs as f32 - self.prev_y_offs;
         self.prev_y_offs = pos_y_offs as f32;
 
         let mut vert_buf = self.vert_buf.clone();
@@ -223,6 +223,9 @@ impl TextBox {
     }
 
     pub fn set_text(&mut self, text: String) {
+        if text == self.text {
+            return;
+        }
         self.text = text;
         self.vert_buf = build_vertex_buffer(&self.gl, &self.pos, self.scale, self.vbo, &self.font_table, self.text.clone());
     }

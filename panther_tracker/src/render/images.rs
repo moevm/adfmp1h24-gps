@@ -3,7 +3,7 @@ use std::io::Cursor;
 use std::sync::{OnceLock};
 use image::{AnimationDecoder, DynamicImage, GenericImageView};
 use image::codecs::gif::GifDecoder;
-use log::info;
+use log::{debug, info};
 use crate::render::gl;
 use crate::render::gl::Gles2;
 use crate::render::gl::types::GLuint;
@@ -35,7 +35,7 @@ fn load_image(gl: &Gles2, image: DynamicImage) -> ImageData {
     let (width, height) = image.dimensions();
     let image_data = image.to_rgba8().into_raw();
 
-    info!("Image decoded! Width: {}, height: {}", width, height);
+    debug!("Image decoded! Width: {}, height: {}", width, height);
 
     let mut texture_id = 0;
     unsafe {
@@ -109,7 +109,9 @@ impl ImageLoader {
 static IMAGES: OnceLock<ImageLoader> = OnceLock::new();
 
 pub fn load_images(gl: &Gles2) {
+    info!("Loading images & gifs started...");
     IMAGES.get_or_init(|| ImageLoader::new(gl));
+    info!("Loading images & gifs finished!");
 }
 pub fn get_image(name: &str) -> Option<ImageData> {
     IMAGES.get().unwrap().get_image(name)

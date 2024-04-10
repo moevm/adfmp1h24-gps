@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 use ab_glyph::{Font, FontRef, Point, PxScaleFont, Rect, ScaleFont};
-use log::{error, info};
+use log::{error, debug, info};
 use crate::render::gl;
 use crate::render::gl::Gles2;
 use crate::render::gl::types::GLuint;
@@ -48,7 +48,7 @@ pub struct FontLoader {
 
 const GLYPH_CELL_SIZE: usize = 300;
 const GLYPH_RASTER_SIZE: f32 = 300.0;
-const GRID_SIZE: usize = 10;
+const GRID_SIZE: usize = 11;
 
 pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
     let font = FontRef::try_from_slice(font).unwrap().into_scaled(GLYPH_RASTER_SIZE);
@@ -60,13 +60,13 @@ pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
     let line_gap = font.line_gap() / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
     let height = font.height() / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
 
-    info!("Font loaded! Ascent: {}, Descent: {}, Line gap: {}, Height: {}",
+    debug!("Font loaded! Ascent: {}, Descent: {}, Line gap: {}, Height: {}",
           ascent, descent, line_gap, height);  // Load all characters into grid GRID_SIZE x GRID_SIZE
 
     let mut i = 1;
     let mut j = 1;
     let mut buf = vec![0u8; GRID_SIZE * GRID_SIZE * GLYPH_CELL_SIZE * GLYPH_CELL_SIZE];
-    for c in ('A'..='Z').chain('a'..='z').chain('0'..='9').chain([',', '.', '!', '*', '\'', '?', ':', '-'].into_iter()) {
+    for c in ('A'..='Z').chain('a'..='z').chain('0'..='9').chain([',', '.', '!', '*', '\'', '?', ':', '-', '(', ')', '+', '/'].into_iter()) {
 
         let glyph_id = font.glyph_id(c);
         let glyph = glyph_id
@@ -85,7 +85,7 @@ pub fn load_font(gl: &Gles2, font: &'static [u8]) -> FontData {
             font.outline_glyph(glyph).unwrap()
         });
         let px_bounds = outline_glyph.px_bounds();
-        info!("{}: px_bounds: {:?}", c, px_bounds);
+        debug!("{}: px_bounds: {:?}", c, px_bounds);
 
         let v_advance = font.v_advance(glyph_id) / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32); // should be 0, silly one
         let h_advance = font.h_advance(glyph_id) / (GLYPH_CELL_SIZE as f32 * GRID_SIZE as f32);
@@ -189,7 +189,9 @@ impl FontLoader {
 static FONTS: OnceLock<FontLoader> = OnceLock::new();
 
 pub fn load_fonts(gl: &Gles2) {
+    info!("Loading fonts started...");
     FONTS.get_or_init(|| FontLoader::new(gl));
+    info!("Loading fonts finished!");
 }
 pub fn get_font(name: &str) -> Option<FontData> {
     FONTS.get().unwrap().get_font(name)

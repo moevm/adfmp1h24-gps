@@ -10,7 +10,7 @@ use crate::render::objects::r#box::Squad;
 use crate::render::objects::textbox::TextBox;
 use crate::render::screens::{ScreenManagementCmd, ScreenRendering, ScreenTrait};
 use crate::render::screens::main::MainScreen;
-use crate::render::screens::records::RecordsScreen;
+use crate::render::screens::records::{RECORDS_LIST, RecordsScreen};
 use crate::render::utils::circle_animation::CircleAnimation;
 use crate::render::utils::position::FixedPosition;
 
@@ -24,6 +24,8 @@ pub struct StatsScreen {
     start: Instant,
 
     logo: Image,
+
+    info: TextBox,
 
     bottom_home_text: TextBox,
     bottom_records_text: TextBox,
@@ -60,7 +62,9 @@ impl StatsScreen {
         let records_icon = Image::new(gl.clone(), get_image("records").unwrap(),
                                       FixedPosition::new().bottom(0.12).height(0.08).left(0.45), Some((0.6, 0.8, 0.2)));
         let stats_icon = Image::new(gl.clone(), get_image("stats").unwrap(),
-                                    FixedPosition::new().bottom(0.12).height(0.08).left(0.73), Some((1.0, 0.9, 1.0)));
+                                    FixedPosition::new().bottom(0.12).height(0.08).left(0.715), Some((1.0, 0.9, 1.0)));
+
+        let info = TextBox::new(gl.clone(), font.clone(), "Info...".to_string(), (0.07, 1.52), 0.95, 1);
 
         StatsScreen {
             gl,
@@ -69,6 +73,8 @@ impl StatsScreen {
             start: Instant::now(),
             screen_rendering,
             cur_color,
+
+            info,
 
             logo,
 
@@ -115,6 +121,16 @@ impl ScreenTrait for StatsScreen {
         self.bg_squad.draw(texture_id);
 
         self.logo.draw(texture_id);
+
+
+        {
+            let records = RECORDS_LIST.lock().unwrap();
+            let total_distance = records.total_distance;
+            let total_time = records.total_time;
+            let avg_speed = records.avg_speed;
+            self.info.set_text(format!("Total distance: {:.2} m\n\nTotal time: {:.2} s\n\nAverage speed: {:.2} m/s", total_distance, total_time, avg_speed));
+            self.info.draw(texture_id);
+        }
 
         self.bottom_home_text.draw(texture_id);
         self.bottom_records_text.draw(texture_id);

@@ -2,6 +2,7 @@ pub mod main;
 pub mod records;
 pub mod stats;
 pub mod active_training;
+pub mod paused_screen;
 
 
 use std::sync::{Arc};

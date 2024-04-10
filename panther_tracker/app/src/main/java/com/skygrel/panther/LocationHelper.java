@@ -20,22 +20,26 @@ public class LocationHelper {
             @Override
             public void onLocationChanged(Location location) {
                 // Call a static native method without nativePtr
-                onLocationUpdate(location.getLatitude(), location.getLongitude());
-                Log.i("GPS", "Location info: ACC: " + location.getAccuracy() + ", altitude: " +
-                        location.getAltitude() + " +-" + location.getVerticalAccuracyMeters() +
-                        "\nTime: " + location.getElapsedRealtimeNanos() / 1000000000 +
-                        "\nExtras: " + location.getExtras() +
-                        "\nSpeed: " + location.getSpeed() + " +-" + location.getSpeedAccuracyMetersPerSecond());
+                onLocationUpdate(location.getLatitude(), location.getLongitude(), location.getAccuracy(), location.getElapsedRealtimeNanos() / 1_000_000_000.0);
+//                Log.i("GPS", "Location info: ACC: " + location.getAccuracy() + ", altitude: " +
+//                        location.getAltitude() + " +-" + location.getVerticalAccuracyMeters() +
+//                        "\nTime: " + location.getElapsedRealtimeNanos() / 1000000000 +
+//                        "\nExtras: " + location.getExtras() +
+//                        "\nSpeed: " + location.getSpeed() + " +-" + location.getSpeedAccuracyMetersPerSecond());
             }
 
             @Override
             public void onProviderEnabled(String provider) {
-                Log.i("GPS", "GPS Provider enabled: " + provider);
+                if (provider.equals("gps")) {
+                    LocationHelper.onProviderEnabled();
+                }
             }
 
             @Override
             public void onProviderDisabled(String provider) {
-                Log.i("GPS", "GPS Provider disabled: " + provider);
+                if (provider.equals("gps")) {
+                    LocationHelper.onProviderDisabled();
+                }
             }
 
             @Override
@@ -68,8 +72,11 @@ public class LocationHelper {
     }
 
     // Modified to not use nativePtr
-    private native void onLocationUpdate(double latitude, double longitude);
+    private native void onLocationUpdate(double latitude, double longitude, double acc, double timestamp);
 
     public native void onPermissionDenied();
     public native void onPermissionGranted();
+
+    public static native void onProviderEnabled();
+    public static native void onProviderDisabled();
 }

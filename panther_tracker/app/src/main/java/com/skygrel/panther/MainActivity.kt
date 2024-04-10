@@ -2,6 +2,7 @@ package com.skygrel.panther
 
 import android.Manifest
 import android.app.NativeActivity
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -17,9 +18,10 @@ class MainActivity : NativeActivity(), ActivityCompat.OnRequestPermissionsResult
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
+
         this.locationHelper = LocationHelper(this)
     }
-
 
     private fun checkAndRequestPermissions() {
         // Check if we already have the permission
